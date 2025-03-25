@@ -7,7 +7,7 @@ import (
 
 func main() {
 
-	buffer, err := os.ReadFile("fib.txt")
+	buffer, err := os.ReadFile("fib.lisp")
 	if err != nil {
 		panic(err)
 	}

@@ -40,6 +40,8 @@ func (r *Runtime) Eval(block *Block) int {
 		return r.builtinOutput(block)
 	case "sign":
 		return r.builtinSign(block)
+	case "tail":
+		return r.builtinTail(block)
 	case "add":
 		return r.builtinAdd(block)
 	case "sub":
@@ -72,6 +74,13 @@ func (r *Runtime) builtinSign(block *Block) int {
 	panic("runtime error")
 }
 
+func (r *Runtime) builtinTail(block *Block) int {
+	v := 0
+	for _, arg := range block.Args {
+		v = r.Eval(arg)
+	}
+	return v
+}
 func (r *Runtime) builtinAdd(block *Block) int {
 	v := 0
 	for _, arg := range block.Args {
@@ -99,9 +108,11 @@ func (r *Runtime) builtinCase(block *Block) int {
 }
 
 func (r *Runtime) builtinOutput(block *Block) int {
-	val := r.Eval(block.Args[0])
-	fmt.Println(val)
-	return val
+	for _, arg := range block.Args {
+		fmt.Printf("%d ", r.Eval(arg))
+	}
+	fmt.Printf("\n")
+	return len(block.Args)
 }
 
 func (r *Runtime) builtinLet(block *Block) int {

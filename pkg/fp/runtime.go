@@ -126,8 +126,6 @@ func (r *Runtime) builtinFunc(block *Block) int {
 	}
 	name := block.Args[0].Name
 	params := []string{}
-	param0 := block.Args[1].Name
-	params = append(params, param0)
 	for _, param := range block.Args[1].Args {
 		params = append(params, param.Name)
 	}

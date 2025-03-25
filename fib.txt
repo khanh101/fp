@@ -1,9 +1,9 @@
 (
-    func fib (x) (
+    func fib [x] (
         case (sign (add x -1))
         1 (add (fib (add x -1)) (fib (add x -2)))
         _ x
     )
 )
-(let x 21)
+(let x 9)
 (print (fib x))

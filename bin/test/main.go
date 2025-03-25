@@ -1,13 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"fp/pkg/fp"
 	"os"
 )
 
 func main() {
-	fmt.Println("hello")
 
 	buffer, err := os.ReadFile("fib.txt")
 	if err != nil {
@@ -15,10 +13,8 @@ func main() {
 	}
 	str := string(buffer)
 	tokenList := fp.ParseFromString(str)
-	fmt.Println(tokenList)
 
 	b, tokenList := fp.ParseMany(tokenList)
-	fmt.Println(b)
 
 	r := fp.Runtime{
 		FuncMap:     make(map[string]fp.Func),

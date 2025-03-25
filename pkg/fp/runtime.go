@@ -6,8 +6,8 @@ import (
 )
 
 type Func struct {
-	Params []string
-	Impl   *Block
+	ParamNameList  []string
+	Implementation *Block
 }
 type Runtime struct {
 	FuncMap     map[string]Func
@@ -44,11 +44,11 @@ func (r *Runtime) Eval(block *Block) int {
 		// new frame
 		f := r.FuncMap[block.Name]
 		varMap := map[string]int{}
-		for i := 0; i < len(f.Params); i++ {
-			varMap[f.Params[i]] = r.Eval(block.Args[i])
+		for i := 0; i < len(f.ParamNameList); i++ {
+			varMap[f.ParamNameList[i]] = r.Eval(block.Args[i])
 		}
 		r.VarMapStack = append(r.VarMapStack, varMap)
-		val := r.Eval(f.Impl)
+		val := r.Eval(f.Implementation)
 		r.VarMapStack = r.VarMapStack[:len(r.VarMapStack)-1]
 		return val
 	}
@@ -75,9 +75,11 @@ func (r *Runtime) builtinAdd(block *Block) int {
 	if block.Name != "add" {
 		panic("runtime error")
 	}
-	a := r.Eval(block.Args[0])
-	b := r.Eval(block.Args[1])
-	return a + b
+	v := 0
+	for _, arg := range block.Args {
+		v += r.Eval(arg)
+	}
+	return v
 }
 
 func (r *Runtime) builtinCase(block *Block) int {
@@ -130,8 +132,8 @@ func (r *Runtime) builtinFunc(block *Block) int {
 		params = append(params, param.Name)
 	}
 	r.FuncMap[name] = Func{
-		Params: params,
-		Impl:   block.Args[2],
+		ParamNameList:  params,
+		Implementation: block.Args[2],
 	}
 	return 0
 }

@@ -1,8 +1,8 @@
 # FP
 
-simple functional programming language in 150 lines of code
+A simple functional programming language in 150 lines of code
 
-## usage
+## a simple program
 
 ```
 // builtin keywords: let, func, case, sign, add, sub, tail, input, output

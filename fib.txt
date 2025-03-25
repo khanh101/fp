@@ -1,0 +1,10 @@
+(
+    let fib = (x) => (
+        (case
+            1 => (add (fib (sub x 1)) (fib (sub x 2)))
+            * => x
+        )(sign (sub x 1))
+    )
+)
+(let x = 7)
+(print (fib x))

@@ -1,3 +1,18 @@
+// builtin keywords: let, func, case, print, sign, add, sub
+
+
+
+// define multiplication from addition and subtraction
+(func mul [x, y] (
+    case (sign x)
+    -1 (mul -x)
+    0 0
+    +1 (add y (mul (add x -1) y))
+))
+
+
+
+
 (
     func fib [x] (
         case (sign (add x -1))
@@ -5,5 +20,8 @@
         _ x
     )
 )
-(let x 9)
-(print (fib x))
+
+(input y)
+(let x 9) // let x = 9
+(output (sub y 20))
+(output (fib x))

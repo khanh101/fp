@@ -13,6 +13,15 @@ func peak(tokenList []Token) Token {
 }
 
 func ParseFromString(str string) []Token {
+	// remove comment
+	parts := strings.Split(str, "\n")
+	newParts := []string{}
+	for _, part := range parts {
+		newParts = append(newParts, strings.Split(part, "//")[0])
+	}
+
+	str = strings.Join(newParts, "\n")
+
 	str = strings.ReplaceAll(str, "(", " ( ")
 	str = strings.ReplaceAll(str, ")", " ) ")
 	str = strings.ReplaceAll(str, "[", " [ ")

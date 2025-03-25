@@ -34,12 +34,16 @@ func (r *Runtime) Eval(block *Block) int {
 		return r.builtinFunc(block)
 	case "case":
 		return r.builtinCase(block)
-	case "print":
-		return r.builtinPrint(block)
+	case "input":
+		return r.builtinInput(block)
+	case "output":
+		return r.builtinOutput(block)
 	case "sign":
 		return r.builtinSign(block)
 	case "add":
 		return r.builtinAdd(block)
+	case "sub":
+		return r.builtinSub(block)
 	default:
 		// new frame
 		f := r.FuncMap[block.Name]
@@ -55,9 +59,6 @@ func (r *Runtime) Eval(block *Block) int {
 }
 
 func (r *Runtime) builtinSign(block *Block) int {
-	if block.Name != "sign" {
-		panic("runtime error")
-	}
 	val := r.Eval(block.Args[0])
 	if val == 0 {
 		return 0
@@ -72,21 +73,17 @@ func (r *Runtime) builtinSign(block *Block) int {
 }
 
 func (r *Runtime) builtinAdd(block *Block) int {
-	if block.Name != "add" {
-		panic("runtime error")
-	}
 	v := 0
 	for _, arg := range block.Args {
 		v += r.Eval(arg)
 	}
 	return v
 }
+func (r *Runtime) builtinSub(block *Block) int {
+	return r.Eval(block.Args[0]) - r.Eval(block.Args[1])
+}
 
 func (r *Runtime) builtinCase(block *Block) int {
-	if block.Name != "case" {
-		panic("runtime error")
-	}
-	// val
 	val := r.Eval(block.Args[0])
 	for i := 1; i < len(block.Args); i += 2 {
 		if block.Args[i].Type == BLOCKTYPE_LITERAL && block.Args[i].Name == "_" {
@@ -101,29 +98,29 @@ func (r *Runtime) builtinCase(block *Block) int {
 	panic("runtime error")
 }
 
-func (r *Runtime) builtinPrint(block *Block) int {
-	if block.Name != "print" {
-		panic("runtime error")
-	}
+func (r *Runtime) builtinOutput(block *Block) int {
 	val := r.Eval(block.Args[0])
-	fmt.Print(val)
+	fmt.Println(val)
 	return val
 }
 
 func (r *Runtime) builtinLet(block *Block) int {
-	if block.Name != "let" {
-		panic("runtime error")
-	}
 	name := block.Args[0].Name
 	val := r.Eval(block.Args[1])
 	r.VarMapStack[len(r.VarMapStack)-1][name] = val
 	return 0
 }
-
-func (r *Runtime) builtinFunc(block *Block) int {
-	if block.Name != "func" {
-		panic("runtime error")
+func (r *Runtime) builtinInput(block *Block) int {
+	name := block.Args[0].Name
+	var val int
+	_, err := fmt.Scan(&val)
+	if err != nil {
+		panic(err)
 	}
+	r.VarMapStack[len(r.VarMapStack)-1][name] = val
+	return 0
+}
+func (r *Runtime) builtinFunc(block *Block) int {
 	name := block.Args[0].Name
 	params := []string{}
 	for _, param := range block.Args[1].Args {

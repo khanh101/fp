@@ -1,6 +1,6 @@
 # FP
 
-a simple functional programming language
+simple functional programming language in 150 lines of code
 
 ## usage
 

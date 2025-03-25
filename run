@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+go run bin/test/main.go

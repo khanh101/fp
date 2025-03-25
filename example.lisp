@@ -39,8 +39,8 @@
 
 (
     func fibonacci [x] (
-        case (sign (add x -1))
-        1 (add (fibonacci (add x -1)) (fibonacci (add x -2)))
+        case (sign (sub x 1))
+        1 (add (fibonacci (sub x 1)) (fibonacci (sub x 2)))
         _ x
     )
 )

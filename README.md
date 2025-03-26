@@ -39,7 +39,7 @@ no 😅
 - program : a list of expression
 - name and expression: name is a string of characters, e.g. `x`, `mul`, and expression is enclosed with parentheses starting with a name, e.g `(let x 3)`, `(add 1 2)`
 - evaluation: in run time, name and expression have an associated value
-    - name is evaluated using a pool of variables; in code, it is `varStack`. if a name is not of a variable name declared using `let` or `input`, it is undefined behavior
+    - name is evaluated using a pool of variables; in code, it is `sttack`. if a name is not of a variable name declared using `let` or `input`, it is undefined behavior
     - expression is evaluated using its name
 
 - builtin functions: `let (or ;), lambda (or =>), case, sign, add (or +), sub (or -), tail, input, output`

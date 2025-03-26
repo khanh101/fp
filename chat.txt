@@ -44,7 +44,7 @@ no 😅
     - name is evaluated using a pool of variables; in code, it is `sttack`. if a name is not of a variable name declared using `let` or `input`, it is undefined behavior
     - expression is evaluated using its name
 
-- builtin functions: `let (or ;), lambda (or =>), case, sign, add (or +), sub (or -), tail, input, output`
+- builtin functions: ` let, lambda, case, sign, sub, add, tail`
 ```
 (let <name> <expr>)                                          - assign value of <expr> into local variable <name>
 (lambda <name_1> ... <name_n> <expr>)                        - declare an anonymous function
@@ -54,9 +54,9 @@ no 😅
 (sub <expr_1> <expr_2>)                                      - subtract
 (tail <expr_1> ... <expr_n>)                                 - evaluate all expressions then return the last one
                                                                (use to declare local variables, do multistep calculation)
-(input)                                                      - read from stdin
-(output <expr_1> ... <expr_n>                                - write to stdout
 ```
+
+- extension functions: `div, output, input, json_add_field, make_list, append_list`
 
 - wildcard symbol: `_` is a special symbol used in `case` to mark every other cases
 - no match is `case` is an undefined behavior
@@ -164,6 +164,10 @@ no 😅
 }')
 (let data (json_add_field data 'subject' 'math'))        // test json extension
 (output data)
+
+(let l (make_list 1 2 3 'hello' -7))                        // test list
+(let l (append_list l 6))
+(output l)
 
 (let x (input))                                           // waiting for user input
 (output (fibonacci x) 11)                                // print the x-th fibonacci

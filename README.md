@@ -26,7 +26,7 @@ _floating point is useful_
 
 ## How to handle infix operator?
 
-translate '[<expr_1> <name> <expr_2>]' into '(<name> <expr_1> <expr_2>'
+translate `[<expr_1> <name> <expr_2>]` into `(<name> <expr_1> <expr_2>)`
 
 ## But can it run Doom?
 

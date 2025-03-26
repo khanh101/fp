@@ -9,7 +9,7 @@ import (
 const DETECT_NONPURE = true
 
 type Runtime interface {
-	Step(expr Expr) Return
+	Step(expr Expr) Value
 }
 
 func NewRuntime() Runtime {
@@ -18,15 +18,15 @@ func NewRuntime() Runtime {
 	}}
 }
 
-// Return : union of int and lambda
-type Return interface{}
+// Value : union of int and lambda - TODO : introduce new data types
+type Value interface{}
 type lambda struct {
 	params []string
 	impl   Expr
 	frame  frame
 }
 
-type frame map[string]Return
+type frame map[string]Value
 
 func (f frame) update(otherFrame frame) frame {
 	for k, v := range otherFrame {
@@ -39,10 +39,10 @@ type newRuntime struct {
 	stack []frame
 }
 
-func (r *newRuntime) Step(expr Expr) Return {
+func (r *newRuntime) Step(expr Expr) Value {
 	switch expr := expr.(type) {
 	case string:
-		var v Return
+		var v Value
 		// convert to number
 		v, err := strconv.Atoi(expr)
 		if err == nil {
@@ -128,7 +128,7 @@ func (r *newRuntime) Step(expr Expr) Return {
 			}
 			return v
 		case "tail":
-			var v Return
+			var v Value
 			for _, arg := range expr.Args {
 				v = r.Step(arg)
 			}
@@ -147,7 +147,7 @@ func (r *newRuntime) Step(expr Expr) Return {
 				panic("runtime error")
 			}()
 			// 1. evaluate arguments
-			var args []Return
+			var args []Value
 			for _, arg := range expr.Args {
 				args = append(args, r.Step(arg))
 			}

@@ -39,12 +39,27 @@
     )
 )
 
+
 // partial function using lambda
 (let addx
     (lambda x
         (lambda y (add x y))
     )
 )
+
+// dict_new
+(let dict_new (lambda (lambda x 0)))
+// dict_get d[x]
+(let dict_get (lambda d x (d x)))
+
+// dict_set d[x] = y
+(let dict_set (lambda d x y (
+    lambda z (
+        case z
+            x y
+            _ (dict_get d z)
+    )
+)))
 
 (let z 20)
 (output z 1)                                            // print z=20 (with label 1)
@@ -65,5 +80,15 @@
 (let add3 (addx t))                                     // partial function
 (output (add3 14) 9)
 
+// dict example
+(let d (dict_new))                                      // new dict
+(let d (dict_set d 2 300))                                 // set value
+(let d (dict_set d 3 500))                                 // set value
+(let d (dict_set d 2 200))                                 // set value
+(output (dict_get d 2) 11)                                 // should print 200
+
+
+// end list example
 (input x)                                               // waiting for user input
-(output (fibonacci x) 11)                                // print the x-th fibonacci (with label 5)
+(output (fibonacci x) 11)                                // print the x-th fibonacci
+

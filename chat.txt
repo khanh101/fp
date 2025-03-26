@@ -241,7 +241,7 @@ type runtime struct {
 	extension map[Name]func(...Value) Value
 }
 
-// Value : union of int and lambda - TODO : introduce new data types
+// Value : union of int, string, lambda - TODO : introduce new data types
 type Value interface{}
 type lambda struct {
 	params []Name
@@ -260,6 +260,8 @@ func (f frame) update(otherFrame frame) frame {
 
 func (r *runtime) Step(expr Expr) Value {
 	switch expr := expr.(type) {
+	case String:
+		return expr
 	case Name:
 		var v Value
 		// convert to number
@@ -384,7 +386,7 @@ func (r *runtime) Step(expr Expr) Value {
 ./pkg/fp/ast.go
 package fp
 
-// Expr : union of string, LambdaExpr
+// Expr : union of Name, LambdaExpr, String
 type Expr interface{}
 
 type Name string
@@ -392,10 +394,15 @@ type LambdaExpr struct {
 	Name Name
 	Args []Expr
 }
+
+type String string
 ./pkg/fp/parser.go
 package fp
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 type Token = string
 
@@ -419,7 +426,16 @@ func Tokenize(str string) []Token {
 
 	str = strings.ReplaceAll(str, "(", " ( ")
 	str = strings.ReplaceAll(str, ")", " ) ")
-	fields := strings.Fields(str)
+
+	// splitBySpaceExceptQuotes : chatgpt prompt: golang split a string by empty space, except those enclosed with double quotes
+	splitBySpaceExceptQuotes := func(s string) []string {
+		// Define a regular expression to match either a quoted string or non-quoted words
+		re := regexp.MustCompile(`(?:[^\s"]+|"[^"]*")`)
+
+		// Find all substrings that match the regular expression
+		return re.FindAllString(s, -1)
+	}
+	fields := splitBySpaceExceptQuotes(str)
 	return fields
 }
 
@@ -454,7 +470,11 @@ func parse(tokenList []Token) (Expr, []Token) {
 			Args: exprList,
 		}, tokenList
 	default:
-		return Name(head), tokenList
+		if head[0] == '"' && head[len(head)-1] == '"' {
+			return String(head[1 : len(head)-1]), tokenList
+		} else {
+			return Name(head), tokenList
+		}
 	}
 }
 do you have any comment on this?

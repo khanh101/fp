@@ -1,6 +1,9 @@
 package fp
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 type Token = string
 
@@ -24,7 +27,16 @@ func Tokenize(str string) []Token {
 
 	str = strings.ReplaceAll(str, "(", " ( ")
 	str = strings.ReplaceAll(str, ")", " ) ")
-	fields := strings.Fields(str)
+
+	// splitBySpaceExceptQuotes : chatgpt prompt: golang split a string by empty space, except those enclosed with double quotes
+	splitBySpaceExceptQuotes := func(s string) []string {
+		// Define a regular expression to match either a quoted string or non-quoted words
+		re := regexp.MustCompile(`(?:[^\s"]+|"[^"]*")`)
+
+		// Find all substrings that match the regular expression
+		return re.FindAllString(s, -1)
+	}
+	fields := splitBySpaceExceptQuotes(str)
 	return fields
 }
 
@@ -59,6 +71,10 @@ func parse(tokenList []Token) (Expr, []Token) {
 			Args: exprList,
 		}, tokenList
 	default:
-		return Name(head), tokenList
+		if head[0] == '"' && head[len(head)-1] == '"' {
+			return String(head[1 : len(head)-1]), tokenList
+		} else {
+			return Name(head), tokenList
+		}
 	}
 }

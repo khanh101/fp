@@ -32,7 +32,7 @@ type runtime struct {
 	extension map[Name]func(...Value) Value
 }
 
-// Value : union of int and lambda - TODO : introduce new data types
+// Value : union of int, string, lambda - TODO : introduce new data types
 type Value interface{}
 type lambda struct {
 	params []Name
@@ -51,6 +51,8 @@ func (f frame) update(otherFrame frame) frame {
 
 func (r *runtime) Step(expr Expr) Value {
 	switch expr := expr.(type) {
+	case String:
+		return expr
 	case Name:
 		var v Value
 		// convert to number

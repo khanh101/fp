@@ -1,6 +1,6 @@
 package fp
 
-// Expr : union of string, LambdaExpr
+// Expr : union of Name, LambdaExpr, String
 type Expr interface{}
 
 type Name string
@@ -8,3 +8,5 @@ type LambdaExpr struct {
 	Name Name
 	Args []Expr
 }
+
+type String string

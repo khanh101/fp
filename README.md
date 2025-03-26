@@ -39,8 +39,8 @@ note that, in the implementation, functions are global objects while variables c
 
 ## Performance improvement
 
-if we assume functions are pure, one can consider the whole program as a set of expressions (with some dependencies)
-each function call only need its own variable scope
+if we assume functions are pure, one can consider the whole program as a set of expressions (with some dependencies of `let`)
+each function call only need its own variable scope, they can execute every expression at the same time (possibly with some waiting for `let` statement) 
 
 ## But can it run Doom?
 

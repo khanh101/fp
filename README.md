@@ -16,8 +16,13 @@ I haven't implemented it yet, but the idea is as follows
 - we have to handle function locally, that is save `funcImpl` into callstack, if a function is returned, pass it into parent's stack.
 
 
-since the language is Turing complete and I almost don't gain anything from doing this, I'll keep it simple for now, no higher-order function
+_since the language is Turing complete and I almost don't gain anything from doing this, I'll keep it simple for now, no higher-order functions_
 
+## How to implement data structures like list, dict
+
+_list is a vector of integers is_ $\mathbb{Z}^{\mathbb{N}} \cong \mathbb{Z}$ _so we're done. Similarly for any other data structures
+
+_floating point is useful_
 
 ## language specs
 

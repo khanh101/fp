@@ -3,9 +3,15 @@
 A simple functional programming language in 200 lines of code. $\mathbb{F}_p$ also denotes the finite field of order $p$ 
 
 
-## todo - add passing function as argument
+## How to handle higher-order functions
 
-It has not yet been implemented, but it is quite simple. When doing function application, instead of assuming the first block is a name (currently we set the name of the first block to block.Name (add 1 2) -> block.Name = add, block.Args is the two literals 1 2, we want to move it to block.Args[0]), if block.Args[0] cannot be evaluated as a literal, it is a function name
+I haven't implemented it yet, but the ideal is as follows
+- Assign each function to an integer
+- builtin `(eval x y)`
+    - evaluate `x`, get an integer
+    - match the integer with the function, let's say `sign`
+    - evaluate `(sign y)` and return
+
 
 ## language specs
 

@@ -34,6 +34,7 @@ func (r *runtime) Eval(block *Block) int {
 			return val
 		}
 		// find all variables from top frame to bottom frame
+		// pure function will find always find it at the top frame - can detect non-pure function
 		for i := len(r.varDictStack) - 1; i >= 0; i-- {
 			if val, ok := r.varDictStack[i][block.Name]; ok {
 				return val

@@ -5,109 +5,135 @@ import (
 	"strconv"
 )
 
-type Func struct {
-	ParamNameList  []string
-	Implementation *Block
-}
-type Runtime struct {
-	FuncMap     map[string]Func
-	VarMapStack []map[string]int
+type Runtime interface {
+	Eval(*Block) int
 }
 
-func (r *Runtime) Eval(block *Block) int {
-	if block.Type == BLOCKTYPE_LITERAL {
-		for i := len(r.VarMapStack) - 1; i >= 0; i-- {
-			if val, ok := r.VarMapStack[i][block.Name]; ok {
+func NewRuntime() Runtime {
+	return &runtime{
+		funcImplDict: make(map[string]funcImpl),
+		varDictStack: []map[string]int{make(map[string]int)},
+	}
+}
+
+type funcImpl struct {
+	paramNameList  []string
+	implementation *Block
+}
+type runtime struct {
+	funcImplDict map[string]funcImpl
+	varDictStack []map[string]int
+}
+
+func (r *runtime) Eval(block *Block) int {
+	switch block.Type {
+	case BLOCKTYPE_NAME:
+		// convert to number
+		val, err := strconv.Atoi(block.Name)
+		if err == nil {
+			return val
+		}
+		// find all variables from top frame to bottom frame
+		for i := len(r.varDictStack) - 1; i >= 0; i-- {
+			if val, ok := r.varDictStack[i][block.Name]; ok {
 				return val
 			}
 		}
-		val, err := strconv.Atoi(block.Name)
-		if err != nil {
-			panic(err)
+		panic("runtime error")
+	case BLOCKTYPE_EXPR:
+		switch block.Name {
+		case "let":
+			return r.builtinLet(block)
+		case "func":
+			return r.builtinFunc(block)
+		case "case":
+			return r.builtinCase(block)
+		case "input":
+			return r.builtinInput(block)
+		case "output":
+			return r.builtinOutput(block)
+		case "sign":
+			return r.builtinSign(block)
+		case "tail":
+			return r.builtinTail(block)
+		case "add":
+			return r.builtinAdd(block)
+		case "sub":
+			return r.builtinSub(block)
+		default: // user-function application
+			f := r.funcImplDict[block.Name]
+			// evaluate argument
+			localVarDict := map[string]int{}
+			for i, arg := range block.Args {
+				localVarDict[f.paramNameList[i]] = r.Eval(arg)
+			}
+			// push new variable stack
+			r.varDictStack = append(r.varDictStack, localVarDict)
+			// evaluate implementation after having argument
+			val := r.Eval(f.implementation)
+			// pop from variable stack
+			r.varDictStack = r.varDictStack[:len(r.varDictStack)-1]
+			return val
 		}
-		return val
-	}
-	switch block.Name {
-	case "let":
-		return r.builtinLet(block)
-	case "func":
-		return r.builtinFunc(block)
-	case "case":
-		return r.builtinCase(block)
-	case "input":
-		return r.builtinInput(block)
-	case "output":
-		return r.builtinOutput(block)
-	case "sign":
-		return r.builtinSign(block)
-	case "tail":
-		return r.builtinTail(block)
-	case "add":
-		return r.builtinAdd(block)
-	case "sub":
-		return r.builtinSub(block)
 	default:
-		// new frame
-		f := r.FuncMap[block.Name]
-		varMap := map[string]int{}
-		for i := 0; i < len(f.ParamNameList); i++ {
-			varMap[f.ParamNameList[i]] = r.Eval(block.Args[i])
-		}
-		r.VarMapStack = append(r.VarMapStack, varMap)
-		val := r.Eval(f.Implementation)
-		r.VarMapStack = r.VarMapStack[:len(r.VarMapStack)-1]
-		return val
+		panic("runtime error")
 	}
 }
 
-func (r *Runtime) builtinSign(block *Block) int {
-	val := r.Eval(block.Args[0])
-	if val == 0 {
+func (r *runtime) builtinSign(block *Block) int {
+	value := r.Eval(block.Args[0])
+	switch {
+	case value > 0:
+		return +1
+	case value < 0:
+		return -1
+	default:
 		return 0
 	}
-	if val > 0 {
-		return +1
-	}
-	if val < 0 {
-		return -1
-	}
-	panic("runtime error")
 }
 
-func (r *Runtime) builtinTail(block *Block) int {
-	v := 0
+func (r *runtime) builtinTail(block *Block) int {
+	value := 0
+	// evaluate all arguments then return the last one
 	for _, arg := range block.Args {
-		v = r.Eval(arg)
+		value = r.Eval(arg)
 	}
-	return v
+	return value
 }
-func (r *Runtime) builtinAdd(block *Block) int {
-	v := 0
+func (r *runtime) builtinAdd(block *Block) int {
+	value := 0
+	// evaluate all arguments then return the sum
 	for _, arg := range block.Args {
-		v += r.Eval(arg)
+		value += r.Eval(arg)
 	}
-	return v
+	return value
 }
-func (r *Runtime) builtinSub(block *Block) int {
+func (r *runtime) builtinSub(block *Block) int {
+	// subtraction
 	return r.Eval(block.Args[0]) - r.Eval(block.Args[1])
 }
 
-func (r *Runtime) builtinCase(block *Block) int {
-	val := r.Eval(block.Args[0])
-	for i := 1; i < len(block.Args); i += 2 {
-		if block.Args[i].Type == BLOCKTYPE_LITERAL && block.Args[i].Name == "_" {
-			// wildcard
-			return r.Eval(block.Args[i+1])
+func (r *runtime) builtinCase(block *Block) int {
+	cond := r.Eval(block.Args[0])
+	i := func(cond int, args []*Block) int {
+		for i := 1; i < len(args); i += 2 {
+			arg := args[i]
+			// process wildcard independently
+			if arg.Type == BLOCKTYPE_NAME && arg.Name == "_" {
+				return i
+			}
+			// process normal case
+			if cond == r.Eval(arg) {
+				return i
+			}
 		}
-		caseVal := r.Eval(block.Args[i])
-		if caseVal == val {
-			return r.Eval(block.Args[i+1])
-		}
-	}
-	panic("runtime error")
+		panic("runtime error")
+	}(cond, block.Args)
+
+	return r.Eval(block.Args[i+1])
 }
 
-func (r *Runtime) builtinOutput(block *Block) int {
+func (r *runtime) builtinOutput(block *Block) int {
 	for _, arg := range block.Args {
 		fmt.Printf("%d ", r.Eval(arg))
 	}
@@ -115,31 +141,31 @@ func (r *Runtime) builtinOutput(block *Block) int {
 	return len(block.Args)
 }
 
-func (r *Runtime) builtinLet(block *Block) int {
+func (r *runtime) builtinLet(block *Block) int {
 	name := block.Args[0].Name
-	val := r.Eval(block.Args[1])
-	r.VarMapStack[len(r.VarMapStack)-1][name] = val
-	return 0
+	value := r.Eval(block.Args[1])
+	r.varDictStack[len(r.varDictStack)-1][name] = value
+	return value
 }
-func (r *Runtime) builtinInput(block *Block) int {
+func (r *runtime) builtinInput(block *Block) int {
 	name := block.Args[0].Name
-	var val int
-	_, err := fmt.Scan(&val)
+	var value int
+	_, err := fmt.Scan(&value)
 	if err != nil {
 		panic(err)
 	}
-	r.VarMapStack[len(r.VarMapStack)-1][name] = val
+	r.varDictStack[len(r.varDictStack)-1][name] = value
 	return 0
 }
-func (r *Runtime) builtinFunc(block *Block) int {
+func (r *runtime) builtinFunc(block *Block) int {
 	name := block.Args[0].Name
 	var paramNameList []string
 	for i := 1; i < len(block.Args)-1; i++ {
 		paramNameList = append(paramNameList, block.Args[i].Name)
 	}
-	r.FuncMap[name] = Func{
-		ParamNameList:  paramNameList,
-		Implementation: block.Args[len(block.Args)-1],
+	r.funcImplDict[name] = funcImpl{
+		paramNameList:  paramNameList,
+		implementation: block.Args[len(block.Args)-1],
 	}
 	return 0
 }

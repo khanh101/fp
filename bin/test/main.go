@@ -12,14 +12,11 @@ func main() {
 		panic(err)
 	}
 	str := string(buffer)
-	tokenList := fp.ParseFromString(str)
+	tokenList := fp.Tokenize(str)
 
 	b, tokenList := fp.ParseMany(tokenList)
 
-	r := fp.Runtime{
-		FuncMap:     make(map[string]fp.Func),
-		VarMapStack: []map[string]int{make(map[string]int)},
-	}
+	r := fp.NewRuntime()
 	for _, block := range b {
 		r.Eval(block)
 	}

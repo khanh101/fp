@@ -12,7 +12,7 @@ func peak(tokenList []Token) Token {
 	return tokenList[0]
 }
 
-func ParseFromString(str string) []Token {
+func Tokenize(str string) []Token {
 	// remove comment
 	parts := strings.Split(str, "\n")
 	newParts := []string{}
@@ -57,13 +57,13 @@ func parse(tokenList []Token) (*Block, []Token) {
 			panic("parse error")
 		}
 		return &Block{
-			Type: BLOCKTYPE_FUNCTION,
+			Type: BLOCKTYPE_EXPR,
 			Name: funcName,
 			Args: blockList,
 		}, tokenList
 	default:
 		return &Block{
-			Type: BLOCKTYPE_LITERAL,
+			Type: BLOCKTYPE_NAME,
 			Name: head,
 		}, tokenList
 	}

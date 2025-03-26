@@ -1,8 +1,8 @@
 package fp
 
 const (
-	BLOCKTYPE_LITERAL  = "literal"  // name
-	BLOCKTYPE_FUNCTION = "function" // name + list of blocks
+	BLOCKTYPE_NAME = "name" // name
+	BLOCKTYPE_EXPR = "expr" // name + list of blocks
 )
 
 type Block struct {

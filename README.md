@@ -28,6 +28,8 @@ It has not yet been implemented, but it is quite simple. When doing function app
 (output <expr_1> ... <expr_n>                                - write to stdout
 ```
 
+- wildcard symbol: `_` is a special symbol used in `case` to mark every other cases
+- there is no match is `case` is an undefined behavior
 
 ## a simple program
 

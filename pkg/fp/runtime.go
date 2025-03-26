@@ -12,7 +12,7 @@ type Runtime interface {
 func NewRuntime() Runtime {
 	return &runtime{
 		funcImplDict: make(map[string]funcImpl),
-		varDictStack: []map[string]int{make(map[string]int)},
+		varStack:     []map[string]int{make(map[string]int)},
 	}
 }
 
@@ -22,7 +22,7 @@ type funcImpl struct {
 }
 type runtime struct {
 	funcImplDict map[string]funcImpl
-	varDictStack []map[string]int
+	varStack     []map[string]int
 }
 
 func (r *runtime) Eval(block *Block) int {
@@ -35,8 +35,8 @@ func (r *runtime) Eval(block *Block) int {
 		}
 		// find all variables from top frame to bottom frame
 		// NOTE: pure functions will find always find it at the top frame - can detect non-pure function
-		for i := len(r.varDictStack) - 1; i >= 0; i-- {
-			if val, ok := r.varDictStack[i][block.Name]; ok {
+		for i := len(r.varStack) - 1; i >= 0; i-- {
+			if val, ok := r.varStack[i][block.Name]; ok {
 				return val
 			}
 		}
@@ -69,11 +69,11 @@ func (r *runtime) Eval(block *Block) int {
 				localVarDict[f.paramNameList[i]] = r.Eval(arg)
 			}
 			// push new variable stack
-			r.varDictStack = append(r.varDictStack, localVarDict)
+			r.varStack = append(r.varStack, localVarDict)
 			// evaluate implementation after having argument
 			val := r.Eval(f.implementation)
 			// pop from variable stack
-			r.varDictStack = r.varDictStack[:len(r.varDictStack)-1]
+			r.varStack = r.varStack[:len(r.varStack)-1]
 			return val
 		}
 	default:
@@ -115,7 +115,7 @@ func (r *runtime) builtinOutput(block *Block) int {
 func (r *runtime) builtinLet(block *Block) int {
 	name := block.Args[0].Name
 	value := r.Eval(block.Args[1])
-	r.varDictStack[len(r.varDictStack)-1][name] = value
+	r.varStack[len(r.varStack)-1][name] = value
 	return value
 }
 
@@ -127,7 +127,7 @@ func (r *runtime) builtinInput(block *Block) int {
 	if err != nil {
 		panic(err)
 	}
-	r.varDictStack[len(r.varDictStack)-1][name] = value
+	r.varStack[len(r.varStack)-1][name] = value
 	return 0
 }
 

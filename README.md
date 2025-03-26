@@ -37,6 +37,10 @@ that is if we pass `f` outside of the function, it no longer valid.
 in the code below, i gave an example with `(let x_v (output 2 5))` and `(func x_f (output 2 6))`
 note that, in the implementation, functions are global objects while variables can be local
 
+## Performance improvement
+
+if we assume functions are pure, one can consider the whole program as a set of expressions (with some dependencies)
+each function call only need its own variable scope
 
 ## But can it run Doom?
 
@@ -44,6 +48,7 @@ no 😅
 
 ## language specs
 
+- program : a list of expression
 - name and expression: name is a string of characters, e.g. `x`, `mul`, and expression is enclosed with parentheses starting with a name, e.g `(let x 3)`, `(add 1 2)`
 - evaluation: in run time, name and expression have an associated value
     - name is evaluated using a pool of variables; in code, it is `varDictStack`. if a name is not of a variable name declared using `let` or `input`, it is undefined behavior

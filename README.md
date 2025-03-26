@@ -11,7 +11,11 @@ I haven't implemented it yet, but the idea is as follows
     - evaluate `x`, get an integer
     - match the integer with a function of 1 parameter, let's say `sign`
     - evaluate `(sign y)` and return
-- for partial function, no idea yet
+- for partial function, `funcImpl` should have another field for partial argument
+- builtin `(partial myfunc x y)`
+    - evaluate `x`
+    - match the integer with a function of 2 parameters, let's say `sub`
+    - make new `funcImpl` from `sub`, adding evaluation of `y` into the first argument
 
 
 ## language specs

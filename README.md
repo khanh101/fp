@@ -5,7 +5,7 @@ A simple functional programming language in 200 lines of code. $\mathbb{F}_p$ al
 
 ## How to handle higher-order functions
 
-I haven't implemented it yet, but the ideal is as follows
+I haven't implemented it yet, but the idea is as follows
 - Assign each function to an integer
 - builtin `(apply x y)`
     - evaluate `x`, get an integer

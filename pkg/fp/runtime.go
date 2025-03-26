@@ -43,6 +43,8 @@ func (r *runtime) Eval(block *Block) int {
 		panic("runtime error")
 	case BLOCKTYPE_EXPR:
 		switch block.Name {
+		case "global":
+			return r.builtinGlobal(block)
 		case "let":
 			return r.builtinLet(block)
 		case "func":
@@ -138,6 +140,14 @@ func (r *runtime) builtinLet(block *Block) int {
 	name := block.Args[0].Name
 	value := r.Eval(block.Args[1])
 	r.varStack[len(r.varStack)-1][name] = value
+	return value
+}
+
+// builtinGlobal : evaluate the expression and assign to local variable
+func (r *runtime) builtinGlobal(block *Block) int {
+	name := block.Args[0].Name
+	value := r.Eval(block.Args[1])
+	r.varStack[0][name] = value
 	return value
 }
 

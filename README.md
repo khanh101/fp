@@ -3,21 +3,6 @@
 A simple functional programming language in 200 lines of code. $\mathbb{F}_p$ also denotes the finite field of order $p$ 
 
 
-## How to handle higher-order functions
-
-I haven't implemented it yet, but the idea is as follows
-- Assign each function to an integer
-- builtin `(partial myfunc x y)`
-    - evaluate `x`
-    - match the integer with a function of 2 parameters, let's say `sub`
-    - make new `funcImpl` from `sub`, save evaluation of `y` into `funcImpl`
-
-- whenever `(myfunc z)` is evaluated, apply all partial arguments.
-- we have to handle function locally, that is save `funcImpl` into callstack, if a function is returned, pass it into parent's stack.
-
-
-_since the language is Turing complete and I almost don't gain anything from doing this, I'll keep it simple for now, no higher-order functions_
-
 ## How to implement data structures like list, dict
 
 list is a vector of integers is $\mathbb{Z}^{\mathbb{N}} \cong \mathbb{Z}$ so we're done. Similarly, for any other data structures
@@ -42,6 +27,10 @@ note that, in the implementation, functions are global objects while variables c
 `(let x (lambda <expr>))` is equivalent to making a function
 `(f <name> <expr>)` and `(let x <id>)` for some random `<name>` and associated `<id>`
 
+## How to handle higher-order functions
+
+Use `lambda` and `global`
+
 ## Performance improvement
 
 if we assume functions are pure, one can consider the whole program as a set of expressions (with some dependencies of `let`)
@@ -59,9 +48,10 @@ no 😅
     - name is evaluated using a pool of variables; in code, it is `varDictStack`. if a name is not of a variable name declared using `let` or `input`, it is undefined behavior
     - expression is evaluated using its name
 
-- builtin functions: `let, func, case, sign, add, sub, tail, input, output, lambda`
+- builtin functions: `let, func, case, sign, add, sub, tail, input, output, lambda, global`
 ```
-(let <name> <expr>)                                          - assign value of <expr> into <name>, return 0
+(global <name> <expr>)                                       - assign value of <expr> into global variable <name>
+(let <name> <expr>)                                          - assign value of <expr> into local variable <name>
 (func <name> <name_1> ... <name_n> <expr>)                   - declare a function <name> with n parameters, return 0
 (case <cond> <expr_1> <expr_2>... <key_{n-1}> <expr_n>)      - branching, if <cond> = <key_i> for i odd, return <expr_{i+1}>
 (sign <expr>)                                                - return (-1), 0, (+1) according to sign of <expr>
@@ -115,6 +105,15 @@ no 😅
     )
 )
 
+// partial function using lambda
+(
+    func addx x (tail
+        (global x_g x)                                  // make x global
+        (lambda y (add x_g y))                          // return lambda
+    )
+)
+
+
 (let z 20)
 (output z 1)                                            // print z=20 (with label 1)
 (output (mul 13 -17) 2)                                 // print 13 * (-17) (with label 2)
@@ -130,7 +129,11 @@ no 😅
 (output f)                                              // print id of f
 (output (f 21) 8)                                       // print 21 + 1 using lambda
 
+(let t 3)
+(let add3 (addx t))                                     // partial function
+(output (add3 14) 9)
+
 (input x)                                               // waiting for user input
-(output (fibonacci x) 9)                                // print the x-th fibonacci (with label 5)
+(output (fibonacci x) 10)                                // print the x-th fibonacci (with label 5)
 
 ```

@@ -33,6 +33,15 @@
     )
 )
 
+// partial function using lambda
+(
+    func addx x (tail
+        (global x_g x)                                  // make x global
+        (lambda y (add x_g y))                          // return lambda
+    )
+)
+
+
 (let z 20)
 (output z 1)                                            // print z=20 (with label 1)
 (output (mul 13 -17) 2)                                 // print 13 * (-17) (with label 2)
@@ -48,5 +57,9 @@
 (output f)                                              // print id of f
 (output (f 21) 8)                                       // print 21 + 1 using lambda
 
+(let t 3)
+(let add3 (addx t))                                     // partial function
+(output (add3 14) 9)
+
 (input x)                                               // waiting for user input
-(output (fibonacci x) 9)                                // print the x-th fibonacci (with label 5)
+(output (fibonacci x) 10)                                // print the x-th fibonacci (with label 5)

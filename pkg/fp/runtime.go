@@ -10,7 +10,7 @@ const DETECT_NONPURE = true
 
 type Runtime interface {
 	Step(expr Expr) Value
-	WithExtension(name string, f func(...Value) Value) Runtime
+	WithExtension(name Name, f func(...Value) Value) Runtime
 }
 
 func NewRuntime() Runtime {
@@ -18,29 +18,29 @@ func NewRuntime() Runtime {
 		stack: []frame{
 			make(frame),
 		},
-		extension: make(map[string]func(...Value) Value),
+		extension: make(map[Name]func(...Value) Value),
 	}
 }
 
-func (r *runtime) WithExtension(name string, f func(...Value) Value) Runtime {
+func (r *runtime) WithExtension(name Name, f func(...Value) Value) Runtime {
 	r.extension[name] = f
 	return r
 }
 
 type runtime struct {
 	stack     []frame
-	extension map[string]func(...Value) Value
+	extension map[Name]func(...Value) Value
 }
 
 // Value : union of int and lambda - TODO : introduce new data types
 type Value interface{}
 type lambda struct {
-	params []string
+	params []Name
 	impl   Expr
 	frame  frame
 }
 
-type frame map[string]Value
+type frame map[Name]Value
 
 func (f frame) update(otherFrame frame) frame {
 	for k, v := range otherFrame {
@@ -51,10 +51,10 @@ func (f frame) update(otherFrame frame) frame {
 
 func (r *runtime) Step(expr Expr) Value {
 	switch expr := expr.(type) {
-	case string:
+	case Name:
 		var v Value
 		// convert to number
-		v, err := strconv.Atoi(expr)
+		v, err := strconv.Atoi(string(expr))
 		if err == nil {
 			return v
 		}
@@ -70,7 +70,7 @@ func (r *runtime) Step(expr Expr) Value {
 	case LambdaExpr:
 		switch expr.Name {
 		case "let":
-			name := expr.Args[0].(string)
+			name := expr.Args[0].(Name)
 			v := r.Step(expr.Args[1])
 			r.stack[len(r.stack)-1][name] = v
 			return v
@@ -81,7 +81,7 @@ func (r *runtime) Step(expr Expr) Value {
 				frame:  nil,
 			}
 			for i := 0; i < len(expr.Args)-1; i++ {
-				paramName := expr.Args[i].(string)
+				paramName := expr.Args[i].(Name)
 				v.params = append(v.params, paramName)
 			}
 			v.impl = expr.Args[len(expr.Args)-1]
@@ -91,7 +91,7 @@ func (r *runtime) Step(expr Expr) Value {
 			cond := r.Step(expr.Args[0])
 			i := func() int {
 				for i := 1; i < len(expr.Args); i += 2 {
-					if arg, ok := expr.Args[i].(string); ok && arg == "_" {
+					if arg, ok := expr.Args[i].(Name); ok && arg == "_" {
 						return i
 					}
 					if r.Step(expr.Args[i]) == cond {

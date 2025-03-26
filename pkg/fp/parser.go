@@ -55,10 +55,10 @@ func parse(tokenList []Token) (Expr, []Token) {
 			panic("parse error")
 		}
 		return LambdaExpr{
-			Name: funcName,
+			Name: Name(funcName),
 			Args: exprList,
 		}, tokenList
 	default:
-		return head, tokenList
+		return Name(head), tokenList
 	}
 }

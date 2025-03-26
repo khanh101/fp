@@ -66,7 +66,7 @@ func (r *newRuntime) Step(expr Expr) Return {
 			}
 			fmt.Println()
 			return len(expr.Args)
-		case "let", ":=":
+		case "let":
 			name := expr.Args[0].(string)
 			v := r.Step(expr.Args[1])
 			r.stack[len(r.stack)-1][name] = v
@@ -80,7 +80,7 @@ func (r *newRuntime) Step(expr Expr) Return {
 			}
 			r.stack[len(r.stack)-1][name] = v
 			return v
-		case "lambda", "=>":
+		case "lambda":
 			v := lambda{
 				params: nil,
 				impl:   nil,
@@ -117,17 +117,17 @@ func (r *newRuntime) Step(expr Expr) Return {
 			case v == 0:
 				return 0
 			}
-		case "sub", "-":
+		case "sub":
 			a := r.Step(expr.Args[0]).(int)
 			b := r.Step(expr.Args[1]).(int)
 			return a - b
-		case "add", "+":
+		case "add":
 			v := 0
 			for _, arg := range expr.Args {
 				v += r.Step(arg).(int)
 			}
 			return v
-		case "tail", ";":
+		case "tail":
 			var v Return
 			for _, arg := range expr.Args {
 				v = r.Step(arg)

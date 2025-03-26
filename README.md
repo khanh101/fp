@@ -13,7 +13,7 @@ floating point is useful
 
 ## How to handle infix operator?
 
-translate `[<expr_1> <name_1> <expr_2> <name_2> <expr_3>]` into `(<name_1> <expr_1> (<name_2> <expr_2> <expr_3>))`
+translate `[<expr_1> <name_1> <expr_2> <name_2> <expr_3>]` into `(<name_1> <expr_1> (<name_2> <expr_2> <expr_3>))` - todo
 
 ## Isn't `(let x 3)` equivalent to `(let x (lambda 3))`?
 

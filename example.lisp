@@ -65,7 +65,5 @@
 (let add3 (addx t))                                     // partial function
 (output (add3 14) 9)
 
-(output [2 + 5 + 6 - 1] 10)                                        // infix notation
-
 (input x)                                               // waiting for user input
 (output (fibonacci x) 11)                                // print the x-th fibonacci (with label 5)

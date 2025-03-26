@@ -15,7 +15,7 @@ floating point is useful
 
 ## How to handle infix operator?
 
-translate `[<expr_1> <name_1> <expr_2> <name_2> <expr_3>]` into `(<name_1> <expr_1> (<name_2> <expr_2> <expr_3>))`
+translate `[<expr_1> <name_1> <expr_2> <name_2> <expr_3>]` into `(<name_1> <expr_1> (<name_2> <expr_2> <expr_3>))` - todo
 
 ## Isn't `(let x 3)` equivalent to `(let x (lambda 3))`?
 
@@ -233,7 +233,7 @@ func (r *newRuntime) Step(expr Expr) Return {
 			}
 			fmt.Println()
 			return len(expr.Args)
-		case "let", ":=":
+		case "let":
 			name := expr.Args[0].(string)
 			v := r.Step(expr.Args[1])
 			r.stack[len(r.stack)-1][name] = v
@@ -247,7 +247,7 @@ func (r *newRuntime) Step(expr Expr) Return {
 			}
 			r.stack[len(r.stack)-1][name] = v
 			return v
-		case "lambda", "=>":
+		case "lambda":
 			v := lambda{
 				params: nil,
 				impl:   nil,
@@ -284,17 +284,17 @@ func (r *newRuntime) Step(expr Expr) Return {
 			case v == 0:
 				return 0
 			}
-		case "sub", "-":
+		case "sub":
 			a := r.Step(expr.Args[0]).(int)
 			b := r.Step(expr.Args[1]).(int)
 			return a - b
-		case "add", "+":
+		case "add":
 			v := 0
 			for _, arg := range expr.Args {
 				v += r.Step(arg).(int)
 			}
 			return v
-		case "tail", ";":
+		case "tail":
 			var v Return
 			for _, arg := range expr.Args {
 				v = r.Step(arg)
@@ -383,8 +383,6 @@ func Tokenize(str string) []Token {
 
 	str = strings.ReplaceAll(str, "(", " ( ")
 	str = strings.ReplaceAll(str, ")", " ) ")
-	str = strings.ReplaceAll(str, "[", " [ ")
-	str = strings.ReplaceAll(str, "]", " ] ")
 	fields := strings.Fields(str)
 	return fields
 }
@@ -393,7 +391,7 @@ func ParseMany(tokenList []Token) ([]Expr, []Token) {
 	var expr Expr
 	var exprList []Expr
 	for {
-		if len(tokenList) == 0 || peak(tokenList) == ")" || peak(tokenList) == "]" {
+		if len(tokenList) == 0 || peak(tokenList) == ")" {
 			break
 		}
 		expr, tokenList = parse(tokenList)
@@ -419,26 +417,6 @@ func parse(tokenList []Token) (Expr, []Token) {
 			Name: funcName,
 			Args: exprList,
 		}, tokenList
-	case "[":
-		exprList, tokenList := ParseMany(tokenList)
-		tokenList, tail := pop(tokenList) // pop )
-		if tail != "]" {
-			panic("parse error")
-		}
-		var parseInfix func(exprList []Expr) Expr
-		parseInfix = func(exprList []Expr) Expr {
-			if len(exprList) == 0 || len(exprList) == 2 {
-				panic("parse error")
-			}
-			if len(exprList) == 1 {
-				return exprList[0]
-			}
-			return LambdaExpr{
-				Name: exprList[1].(string),
-				Args: append([]Expr{}, exprList[0], parseInfix(exprList[2:])),
-			}
-		}
-		return parseInfix(exprList), tokenList
 	default:
 		return head, tokenList
 	}

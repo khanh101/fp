@@ -10,7 +10,7 @@ const DETECT_NONPURE = true
 
 type Runtime interface {
 	Step(expr Expr) Value
-	WithExtension(name string, f func(...int) int) Runtime
+	WithExtension(name string, f func(...Value) Value) Runtime
 }
 
 func NewRuntime() Runtime {
@@ -18,18 +18,18 @@ func NewRuntime() Runtime {
 		stack: []frame{
 			make(frame),
 		},
-		extension: make(map[string]func(...int) int),
+		extension: make(map[string]func(...Value) Value),
 	}
 }
 
-func (r *runtime) WithExtension(name string, f func(...int) int) Runtime {
+func (r *runtime) WithExtension(name string, f func(...Value) Value) Runtime {
 	r.extension[name] = f
 	return r
 }
 
 type runtime struct {
 	stack     []frame
-	extension map[string]func(...int) int
+	extension map[string]func(...Value) Value
 }
 
 // Value : union of int and lambda - TODO : introduce new data types
@@ -69,25 +69,9 @@ func (r *runtime) Step(expr Expr) Value {
 		panic("runtime error")
 	case LambdaExpr:
 		switch expr.Name {
-		case "output":
-			for _, arg := range expr.Args {
-				v := r.Step(arg)
-				fmt.Printf("%v ", v)
-			}
-			fmt.Println()
-			return len(expr.Args)
 		case "let":
 			name := expr.Args[0].(string)
 			v := r.Step(expr.Args[1])
-			r.stack[len(r.stack)-1][name] = v
-			return v
-		case "input":
-			name := expr.Args[0].(string)
-			var v int
-			_, err := fmt.Scanf("%d", &v)
-			if err != nil {
-				panic(err)
-			}
 			r.stack[len(r.stack)-1][name] = v
 			return v
 		case "lambda":
@@ -143,16 +127,16 @@ func (r *runtime) Step(expr Expr) Value {
 				v = r.Step(arg)
 			}
 			return v
-		default: // function application
+		default:
 			// check for extension
 			if f, ok := r.extension[expr.Name]; ok {
-				var args []int
+				var args []Value
 				for _, arg := range expr.Args {
-					args = append(args, r.Step(arg).(int))
+					args = append(args, r.Step(arg))
 				}
 				return f(args...)
 			}
-
+			// user-defined function application
 			// 1. get func recursively
 			f := func() lambda {
 				for i := len(r.stack) - 1; i >= 0; i-- {

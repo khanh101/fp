@@ -91,6 +91,6 @@
 
 (output (div 6 2))                                      // test extension
 
-(input x)                                               // waiting for user input
+(let x (input))                                               // waiting for user input
 (output (fibonacci x) 11)                                // print the x-th fibonacci
 

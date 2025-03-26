@@ -52,7 +52,7 @@ no 😅
 (sub <expr_1> <expr_2>)                                      - subtract
 (tail <expr_1> ... <expr_n>)                                 - evaluate all expressions then return the last one
                                                                (use to declare local variables, do multistep calculation)
-(input <name>)                                               - read stdin and assign into <name>
+(input)                                                      - read from stdin
 (output <expr_1> ... <expr_n>                                - write to stdout
 ```
 

@@ -30,7 +30,7 @@ floating point is useful
 
 translate `[<expr_1> <name> <expr_2>]` into `(<name> <expr_1> <expr_2>)`
 
-## Isn't `(let x 3)` equivalent to `(func x 3)`?
+## Isn't `(let x 3)` equivalent to `(func x 3)` or `(let x (lambda 3))`?
 
 yes, if functions are pure, then we can consider `(let x <expr>)` as a pure function of the form `(func x <expr>)`. 
 however, if functions are not pure, if `x` is defined locally, `func f (x + 3)` and `let f (x + 3)` are different
@@ -38,6 +38,9 @@ since variables are evaluated at definition but functions are only evaluated whe
 that is if we pass `f` outside of the function, it no longer valid.
 in the code below, i gave an example with `(let x_v (output 2 5))` and `(func x_f (output 2 6))`
 note that, in the implementation, functions are global objects while variables can be local
+
+`(let x (lambda <expr>))` is equivalent to making a function
+`(f <name> <expr>)` and `(let x <id>)` for some random `<name>` and associated `<id>`
 
 ## Performance improvement
 

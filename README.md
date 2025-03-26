@@ -7,15 +7,12 @@ A simple functional programming language in 200 lines of code. $\mathbb{F}_p$ al
 
 I haven't implemented it yet, but the idea is as follows
 - Assign each function to an integer
-- builtin `(apply x y)`
-    - evaluate `x`, get an integer
-    - match the integer with a function of 1 parameter, let's say `sign`
-    - evaluate `(sign y)` and return
-- for partial function, `funcImpl` should have another field for partial argument
 - builtin `(partial myfunc x y)`
     - evaluate `x`
     - match the integer with a function of 2 parameters, let's say `sub`
-    - make new `funcImpl` from `sub`, adding evaluation of `y` into the first argument
+    - make new `funcImpl` from `sub`, save evaluation of `y` into `funcImpl`
+
+- whenever `(myfunc z)` is evaluated, apply all partial arguments
 
 
 ## language specs

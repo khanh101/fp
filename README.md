@@ -1,6 +1,6 @@
 # FP
 
-A simple functional programming language in 150 lines of code
+A simple functional programming language in 200 lines of code. $\mathbb{F}_p$ also denotes the finite field of order $p$ 
 
 
 ## todo - add passing function as argument

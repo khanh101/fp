@@ -1,13 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"fp/pkg/fp"
 	"os"
 )
 
 func main() {
-
 	buffer, err := os.ReadFile("example.lisp")
 	if err != nil {
 		panic(err)
@@ -38,6 +38,17 @@ func main() {
 			panic(err)
 		}
 		return v
+	}).WithExtension("json_add_field", func(nums ...fp.Value) fp.Value {
+		var v map[fp.String]fp.Value
+		if err := json.Unmarshal([]byte(nums[0].(fp.String)), &v); err != nil {
+			panic(err)
+		}
+		v[nums[1].(fp.String)] = nums[2]
+		var b []byte
+		if b, err = json.Marshal(v); err != nil {
+			panic(err)
+		}
+		return string(b)
 	})
 	for _, expr := range exprList {
 		r.Step(expr)

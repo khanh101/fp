@@ -91,7 +91,13 @@
 
 (output (div 6 2))                                      // test extension
 
-(output "hello word")
+(output 'hello word')
+(let data '{
+    "name": "khanh",
+    "age": 28
+}')
+(let data (json_add_field data 'subject' 'math'))                       // test json
+(output data)
 
 (let x (input))                                               // waiting for user input
 (output (fibonacci x) 11)                                // print the x-th fibonacci

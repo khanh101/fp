@@ -2,234 +2,170 @@ package fp
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 )
 
+const DETECT_NONPURE = true
+
 type Runtime interface {
-	Eval(*Block) int
+	Step(expr Expr) Return
 }
 
 func NewRuntime() Runtime {
-	return &runtime{
-		funcImplDict: make(map[string]funcImpl),
-		varStack:     []map[string]int{make(map[string]int)},
+	return &newRuntime{stack: []frame{
+		make(frame),
+	}}
+}
+
+// Return : union of int and lambda
+type Return interface{}
+type lambda struct {
+	params []string
+	impl   Expr
+	frame  frame
+}
+
+type frame map[string]Return
+
+func (f frame) update(otherFrame frame) frame {
+	for k, v := range otherFrame {
+		f[k] = v
 	}
+	return f
 }
 
-type funcImpl struct {
-	paramNameList  []string
-	implementation *Block
-}
-type runtime struct {
-	funcImplDict map[string]funcImpl
-	varStack     []map[string]int
+type newRuntime struct {
+	stack []frame
 }
 
-func (r *runtime) Eval(block *Block) int {
-	switch block.Type {
-	case BLOCKTYPE_NAME:
+func (r *newRuntime) Step(expr Expr) Return {
+	switch expr := expr.(type) {
+	case string:
+		var v Return
 		// convert to number
-		val, err := strconv.Atoi(block.Name)
+		v, err := strconv.Atoi(expr)
 		if err == nil {
-			return val
+			return v
 		}
-		// find all variables from top frame to bottom frame
-		// NOTE: pure functions will find always find it at the top frame - can detect non-pure function
-		for i := len(r.varStack) - 1; i >= 0; i-- {
-			if val, ok := r.varStack[i][block.Name]; ok {
-				return val
-			}
-		}
-		panic("runtime error")
-	case BLOCKTYPE_EXPR:
-		switch block.Name {
-		case "global":
-			return r.builtinGlobal(block)
-		case "let":
-			return r.builtinLet(block)
-		case "func":
-			return r.builtinFunc(block)
-		case "lambda":
-			return r.builtinLambda(block)
-		case "case":
-			return r.builtinCase(block)
-		case "input":
-			return r.builtinInput(block)
-		case "output":
-			return r.builtinOutput(block)
-		case "sign":
-			return r.builtinSign(block)
-		case "tail":
-			return r.builtinTail(block)
-		case "add":
-			return r.builtinAdd(block)
-		case "sub":
-			return r.builtinSub(block)
-		default: // apply function
-			return r.applyFunc(block)
-		}
-	default:
-		panic("runtime error")
-	}
-}
-
-func (r *runtime) applyFunc(block *Block) int {
-	f := func(blockName string) funcImpl {
-		name := func(blockName string) string {
-			// find lambda first
-			// find all variables from top frame to bottom frame
-			// NOTE: pure functions will find always find it at the top frame - can detect non-pure function
-			for i := len(r.varStack) - 1; i >= 0; i-- {
-				if val, ok := r.varStack[i][block.Name]; ok {
-					return fmt.Sprintf("_lambda_%d", val)
-
+		for i := len(r.stack) - 1; i >= 0; i-- {
+			if v, ok := r.stack[i][expr]; ok {
+				if DETECT_NONPURE && i != 0 && i < len(r.stack)-1 {
+					_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
 				}
-			}
-			// not a lambda, must be a function
-			return blockName
-		}(blockName)
-		return r.funcImplDict[name]
-	}(block.Name)
-
-	// evaluate argument
-	localVarDict := map[string]int{}
-	for i, arg := range block.Args {
-		localVarDict[f.paramNameList[i]] = r.Eval(arg)
-	}
-	// push new variable stack
-	r.varStack = append(r.varStack, localVarDict)
-	// evaluate implementation after having argument
-	val := r.Eval(f.implementation)
-	// pop from variable stack
-	r.varStack = r.varStack[:len(r.varStack)-1]
-	return val
-}
-
-// builtinCase : process cases
-func (r *runtime) builtinCase(block *Block) int {
-	cond := r.Eval(block.Args[0])
-	i := func(cond int, args []*Block) int {
-		for i := 1; i < len(args); i += 2 {
-			arg := args[i]
-			// process wildcard independently
-			if arg.Type == BLOCKTYPE_NAME && arg.Name == "_" {
-				return i
-			}
-			// process normal case
-			if cond == r.Eval(arg) {
-				return i
+				return v
 			}
 		}
 		panic("runtime error")
-	}(cond, block.Args)
-
-	return r.Eval(block.Args[i+1])
-}
-
-// builtinOutput : evaluate the list of expressions and print
-func (r *runtime) builtinOutput(block *Block) int {
-	for _, arg := range block.Args {
-		fmt.Printf("%d ", r.Eval(arg))
-	}
-	fmt.Printf("\n")
-	return len(block.Args)
-}
-
-// builtinLet : evaluate the expression and assign to local variable
-func (r *runtime) builtinLet(block *Block) int {
-	name := block.Args[0].Name
-	value := r.Eval(block.Args[1])
-	r.varStack[len(r.varStack)-1][name] = value
-	return value
-}
-
-// builtinGlobal : evaluate the expression and assign to local variable
-func (r *runtime) builtinGlobal(block *Block) int {
-	name := block.Args[0].Name
-	value := r.Eval(block.Args[1])
-	r.varStack[0][name] = value
-	return value
-}
-
-// builtinInput : get input from stdin and assign to local variable
-func (r *runtime) builtinInput(block *Block) int {
-	name := block.Args[0].Name
-	var value int
-	_, err := fmt.Scan(&value)
-	if err != nil {
-		panic(err)
-	}
-	r.varStack[len(r.varStack)-1][name] = value
-	return 0
-}
-
-func (r *runtime) builtinLambda(block *Block) int {
-	id := len(r.funcImplDict)
-	name := fmt.Sprintf("_lambda_%d", id)
-
-	var paramNameList []string
-	for i := 0; i < len(block.Args)-1; i++ {
-		paramNameList = append(paramNameList, block.Args[i].Name)
-	}
-	r.funcImplDict[name] = funcImpl{
-		paramNameList:  paramNameList,
-		implementation: block.Args[len(block.Args)-1],
-	}
-
-	return id
-}
-
-// builtinFunc : function definition, save function implementation
-func (r *runtime) builtinFunc(block *Block) int {
-	name := block.Args[0].Name
-	var paramNameList []string
-	for i := 1; i < len(block.Args)-1; i++ {
-		paramNameList = append(paramNameList, block.Args[i].Name)
-	}
-	r.funcImplDict[name] = funcImpl{
-		paramNameList:  paramNameList,
-		implementation: block.Args[len(block.Args)-1],
-	}
-	return 0
-}
-
-// builtinAdd : sum
-func (r *runtime) builtinAdd(block *Block) int {
-	value := 0
-	// evaluate all arguments then return the sum
-	// NOTE : if functions are pure, this can be done in parallel
-	for _, arg := range block.Args {
-		value += r.Eval(arg)
-	}
-	return value
-}
-
-// builtinTail : similar to sum but get the last one
-func (r *runtime) builtinTail(block *Block) int {
-	value := 0
-	// evaluate all arguments then return the last one
-	// NOTE : if functions are pure, this can be done in parallel
-	for _, arg := range block.Args {
-		value = r.Eval(arg)
-	}
-	return value
-}
-
-// builtinSub : subtract
-func (r *runtime) builtinSub(block *Block) int {
-	// subtraction
-	return r.Eval(block.Args[0]) - r.Eval(block.Args[1])
-}
-
-// builtinSign : sign function
-func (r *runtime) builtinSign(block *Block) int {
-	value := r.Eval(block.Args[0])
-	switch {
-	case value > 0:
-		return +1
-	case value < 0:
-		return -1
+	case LambdaExpr:
+		switch expr.Name {
+		case "output":
+			for _, arg := range expr.Args {
+				v := r.Step(arg)
+				fmt.Printf("%v ", v)
+			}
+			fmt.Println()
+			return len(expr.Args)
+		case "let":
+			name := expr.Args[0].(string)
+			v := r.Step(expr.Args[1])
+			r.stack[len(r.stack)-1][name] = v
+			return v
+		case "input":
+			name := expr.Args[0].(string)
+			var v int
+			_, err := fmt.Scanf("%d", &v)
+			if err != nil {
+				panic(err)
+			}
+			r.stack[len(r.stack)-1][name] = v
+			return v
+		case "lambda":
+			v := lambda{
+				params: nil,
+				impl:   nil,
+				frame:  nil,
+			}
+			for i := 0; i < len(expr.Args)-1; i++ {
+				paramName := expr.Args[i].(string)
+				v.params = append(v.params, paramName)
+			}
+			v.impl = expr.Args[len(expr.Args)-1]
+			v.frame = make(frame).update(r.stack[len(r.stack)-1])
+			return v
+		case "case":
+			cond := r.Step(expr.Args[0])
+			i := func() int {
+				for i := 1; i < len(expr.Args); i += 2 {
+					if arg, ok := expr.Args[i].(string); ok && arg == "_" {
+						return i
+					}
+					if r.Step(expr.Args[i]) == cond {
+						return i
+					}
+				}
+				panic("runtime error")
+			}()
+			return r.Step(expr.Args[i+1])
+		case "sign":
+			v := r.Step(expr.Args[0]).(int)
+			switch {
+			case v > 0:
+				return +1
+			case v < 0:
+				return -1
+			case v == 0:
+				return 0
+			}
+		case "sub":
+			a := r.Step(expr.Args[0]).(int)
+			b := r.Step(expr.Args[1]).(int)
+			return a - b
+		case "add":
+			v := 0
+			for _, arg := range expr.Args {
+				v += r.Step(arg).(int)
+			}
+			return v
+		case "tail":
+			var v Return
+			for _, arg := range expr.Args {
+				v = r.Step(arg)
+			}
+			return v
+		default: // function application
+			// 1. get func recursively
+			f := func() lambda {
+				for i := len(r.stack) - 1; i >= 0; i-- {
+					if f, ok := r.stack[i][expr.Name]; ok {
+						if DETECT_NONPURE && i != 0 && i < len(r.stack)-1 {
+							_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
+						}
+						return f.(lambda)
+					}
+				}
+				panic("runtime error")
+			}()
+			// 1. evaluate arguments
+			var args []Return
+			for _, arg := range expr.Args {
+				args = append(args, r.Step(arg))
+			}
+			// 2. add argument to local frame
+			localFrame := make(frame).update(f.frame)
+			for i := 0; i < len(f.params); i++ {
+				localFrame[f.params[i]] = args[i]
+			}
+			// 3. push frame to stack
+			r.stack = append(r.stack, localFrame)
+			// 4. exec function
+			v := r.Step(f.impl)
+			// 5. pop frame from stack
+			r.stack = r.stack[:len(r.stack)-1]
+			return v
+		}
 	default:
-		return 0
+		panic("runtime error")
 	}
+	panic("runtime error")
 }

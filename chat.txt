@@ -2,7 +2,7 @@ below is the readme and implementation of a simple functional programming langua
 README.md
 # FP
 
-A simple functional programming language in 200 lines of code. $\mathbb{F}_p$ also denotes the finite field of order $p$ 
+A simple functional programming language in 150 lines of code with `functions as first-class citizens`. $\mathbb{F}_p$ also denotes the finite field of order $p$ 
 
 
 ## How to implement data structures like list, dict
@@ -15,23 +15,19 @@ floating point is useful
 
 ## How to handle infix operator?
 
-translate `[<expr_1> <name> <expr_2>]` into `(<name> <expr_1> <expr_2>)`
+translate `[<expr_1> <name> <expr_2>]` into `(<name> <expr_1> <expr_2>)` - not yet implemented
 
-## Isn't `(let x 3)` equivalent to `(func x 3)` or `(let x (lambda 3))`?
+## Isn't `(let x 3)` equivalent to `(let x (lambda 3))`?
 
 yes, if functions are pure, then we can consider `(let x <expr>)` as a pure function of the form `(func x <expr>)`. 
-however, if functions are not pure, if `x` is defined locally, `func f (x + 3)` and `let f (x + 3)` are different
+however, if functions are not pure, if `x` is defined locally, `(let f (lambda (x + 3)))` and `let f (x + 3)` are different
 since variables are evaluated at definition but functions are only evaluated when it is called,
 that is if we pass `f` outside of the function, it no longer valid.
 in the code below, i gave an example with `(let x_v (output 2 5))` and `(func x_f (output 2 6))`
-note that, in the implementation, functions are global objects while variables can be local
-
-`(let x (lambda <expr>))` is equivalent to making a function
-`(f <name> <expr>)` and `(let x <id>)` for some random `<name>` and associated `<id>`
 
 ## How to handle higher-order functions
 
-Use `lambda` and `global`
+higher-order function is already implemented
 
 ## Performance improvement
 
@@ -52,9 +48,8 @@ no 😅
 
 - builtin functions: `let, func, case, sign, add, sub, tail, input, output, lambda, global`
 ```
-(global <name> <expr>)                                       - assign value of <expr> into global variable <name>
 (let <name> <expr>)                                          - assign value of <expr> into local variable <name>
-(func <name> <name_1> ... <name_n> <expr>)                   - declare a function <name> with n parameters, return 0
+(lambda <name_1> ... <name_n> <expr>)                        - declare an anonymous function
 (case <cond> <expr_1> <expr_2>... <key_{n-1}> <expr_n>)      - branching, if <cond> = <key_i> for i odd, return <expr_{i+1}>
 (sign <expr>)                                                - return (-1), 0, (+1) according to sign of <expr>
 (add <expr_1> ... <expr_n>)                                  - add
@@ -63,7 +58,6 @@ no 😅
                                                                (use to declare local variables, do multistep calculation)
 (input <name>)                                               - read stdin and assign into <name>
 (output <expr_1> ... <expr_n>                                - write to stdout
-(lambda <name_1> ... <name_n> <expr>)                        - declare an anonymous function and return its id
 ```
 
 - wildcard symbol: `_` is a special symbol used in `case` to mark every other cases
@@ -73,48 +67,52 @@ no 😅
 
 ```
 // define multiplication
-(
-    func mul x y (case (sign y)                         // mul: (x y) -> xy
-        0 0                                             // if y = 0, return 0
-        -1 (sub 0 (mul x (sub 0 y)))                    // if y < 0, return 0 - x(-y)
-        +1 (add x (mul x (sub y 1)))                    // if y > 0, return x + x(y-1)
+(let mul
+    (lambda x y
+        (case (sign y)                         // mul: (x y) -> xy
+            0 0                                             // if y = 0, return 0
+            -1 (sub 0 (mul x (sub 0 y)))                    // if y < 0, return 0 - x(-y)
+            +1 (add x (mul x (sub y 1)))                    // if y > 0, return x + x(y-1)
+        )
     )
 )
 
 // define modulo
-(
-    func mod x y (tail                                  // mul: (x y) -> x % y // defined only for positive y
-        (let z (sub x y))                               // local var z = x - y
-        (output z x y 6)                                // print local value of z (with label 6)
-        (case (sign z)
-            +1 (mod z y)                                // if x > y, return (x - y) % y
-            0  0                                        // if x = y, return 0
-            -1 x                                        // if x < y, return x
+(let mod
+    (lambda x y
+        (tail                                  // mul: (x y) -> x % y // defined only for positive y
+            (let z (sub x y))                               // local var z = x - y
+            (output z x y 6)                                // print local value of z (with label 6)
+            (case (sign z)
+                +1 (mod z y)                                // if x > y, return (x - y) % y
+                0  0                                        // if x = y, return 0
+                -1 x                                        // if x < y, return x
+            )
         )
     )
 )
 
 // define fibonacci
 
-(
-    func fibonacci x (case (sign (sub x 1))
-        1 (tail
-            (let y (fibonacci (sub x 1)))
-            (let z (fibonacci (sub x 2)))
-            (add y z)
+(let fibonacci
+    (lambda x
+        (case (sign (sub x 1))
+            1 (tail
+                (let y (fibonacci (sub x 1)))
+                (let z (fibonacci (sub x 2)))
+                (add y z)
+            )
+            _ x
         )
-        _ x
     )
 )
 
 // partial function using lambda
-(
-    func addx x (tail
-        (global x_g x)                                  // make x global
-        (lambda y (add x_g y))                          // return lambda
+(let addx
+    (lambda x
+        (lambda y (add x y))
     )
 )
-
 
 (let z 20)
 (output z 1)                                            // print z=20 (with label 1)
@@ -123,12 +121,12 @@ no 😅
 (output z 4)                                            // print z=20 again (with label 4), verify that the other z is an actual local variable
 
 (let x_v (output 2 5))                                  // declare x_v - (output 2 5) is executed immediately
-(func x_f (output 2 6))                                 // declare x_v - (output 2 6) is not executed immediately
+(let x_f (lambda (output 2 6)))                         // declare x_f - (output 2 6) is not executed immediately
 (output 7)                                              // for debugging
 (x_f)                                                   // apply x_f - (output 2 6) is executed
 
 (let f (lambda x (add x 1)))                            // define lambda
-(output f)                                              // print id of f
+(output f)                                              // print lambda
 (output (f 21) 8)                                       // print 21 + 1 using lambda
 
 (let t 3)
@@ -156,14 +154,14 @@ func main() {
 	str := string(buffer)
 	tokenList := fp.Tokenize(str)
 
-	blockList, tokenList := fp.ParseMany(tokenList)
+	exprList, tokenList := fp.ParseMany(tokenList)
 	if len(tokenList) > 0 {
 		panic("parse error")
 	}
 
 	r := fp.NewRuntime()
-	for _, block := range blockList {
-		r.Eval(block)
+	for _, expr := range exprList {
+		r.Step(expr)
 	}
 }
 ./pkg/fp/runtime.go
@@ -171,236 +169,172 @@ package fp
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 )
 
+const DETECT_NONPURE = true
+
 type Runtime interface {
-	Eval(*Block) int
+	Step(expr Expr) Return
 }
 
 func NewRuntime() Runtime {
-	return &runtime{
-		funcImplDict: make(map[string]funcImpl),
-		varStack:     []map[string]int{make(map[string]int)},
+	return &newRuntime{stack: []frame{
+		make(frame),
+	}}
+}
+
+// Return : union of int and lambda
+type Return interface{}
+type lambda struct {
+	params []string
+	impl   Expr
+	frame  frame
+}
+
+type frame map[string]Return
+
+func (f frame) update(otherFrame frame) frame {
+	for k, v := range otherFrame {
+		f[k] = v
 	}
+	return f
 }
 
-type funcImpl struct {
-	paramNameList  []string
-	implementation *Block
-}
-type runtime struct {
-	funcImplDict map[string]funcImpl
-	varStack     []map[string]int
+type newRuntime struct {
+	stack []frame
 }
 
-func (r *runtime) Eval(block *Block) int {
-	switch block.Type {
-	case BLOCKTYPE_NAME:
+func (r *newRuntime) Step(expr Expr) Return {
+	switch expr := expr.(type) {
+	case string:
+		var v Return
 		// convert to number
-		val, err := strconv.Atoi(block.Name)
+		v, err := strconv.Atoi(expr)
 		if err == nil {
-			return val
+			return v
 		}
-		// find all variables from top frame to bottom frame
-		// NOTE: pure functions will find always find it at the top frame - can detect non-pure function
-		for i := len(r.varStack) - 1; i >= 0; i-- {
-			if val, ok := r.varStack[i][block.Name]; ok {
-				return val
-			}
-		}
-		panic("runtime error")
-	case BLOCKTYPE_EXPR:
-		switch block.Name {
-		case "global":
-			return r.builtinGlobal(block)
-		case "let":
-			return r.builtinLet(block)
-		case "func":
-			return r.builtinFunc(block)
-		case "lambda":
-			return r.builtinLambda(block)
-		case "case":
-			return r.builtinCase(block)
-		case "input":
-			return r.builtinInput(block)
-		case "output":
-			return r.builtinOutput(block)
-		case "sign":
-			return r.builtinSign(block)
-		case "tail":
-			return r.builtinTail(block)
-		case "add":
-			return r.builtinAdd(block)
-		case "sub":
-			return r.builtinSub(block)
-		default: // apply function
-			return r.applyFunc(block)
-		}
-	default:
-		panic("runtime error")
-	}
-}
-
-func (r *runtime) applyFunc(block *Block) int {
-	f := func(blockName string) funcImpl {
-		name := func(blockName string) string {
-			// find lambda first
-			// find all variables from top frame to bottom frame
-			// NOTE: pure functions will find always find it at the top frame - can detect non-pure function
-			for i := len(r.varStack) - 1; i >= 0; i-- {
-				if val, ok := r.varStack[i][block.Name]; ok {
-					return fmt.Sprintf("_lambda_%d", val)
-
+		for i := len(r.stack) - 1; i >= 0; i-- {
+			if v, ok := r.stack[i][expr]; ok {
+				if DETECT_NONPURE && i != 0 && i < len(r.stack)-1 {
+					_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
 				}
-			}
-			// not a lambda, must be a function
-			return blockName
-		}(blockName)
-		return r.funcImplDict[name]
-	}(block.Name)
-
-	// evaluate argument
-	localVarDict := map[string]int{}
-	for i, arg := range block.Args {
-		localVarDict[f.paramNameList[i]] = r.Eval(arg)
-	}
-	// push new variable stack
-	r.varStack = append(r.varStack, localVarDict)
-	// evaluate implementation after having argument
-	val := r.Eval(f.implementation)
-	// pop from variable stack
-	r.varStack = r.varStack[:len(r.varStack)-1]
-	return val
-}
-
-// builtinCase : process cases
-func (r *runtime) builtinCase(block *Block) int {
-	cond := r.Eval(block.Args[0])
-	i := func(cond int, args []*Block) int {
-		for i := 1; i < len(args); i += 2 {
-			arg := args[i]
-			// process wildcard independently
-			if arg.Type == BLOCKTYPE_NAME && arg.Name == "_" {
-				return i
-			}
-			// process normal case
-			if cond == r.Eval(arg) {
-				return i
+				return v
 			}
 		}
 		panic("runtime error")
-	}(cond, block.Args)
-
-	return r.Eval(block.Args[i+1])
-}
-
-// builtinOutput : evaluate the list of expressions and print
-func (r *runtime) builtinOutput(block *Block) int {
-	for _, arg := range block.Args {
-		fmt.Printf("%d ", r.Eval(arg))
-	}
-	fmt.Printf("\n")
-	return len(block.Args)
-}
-
-// builtinLet : evaluate the expression and assign to local variable
-func (r *runtime) builtinLet(block *Block) int {
-	name := block.Args[0].Name
-	value := r.Eval(block.Args[1])
-	r.varStack[len(r.varStack)-1][name] = value
-	return value
-}
-
-// builtinGlobal : evaluate the expression and assign to local variable
-func (r *runtime) builtinGlobal(block *Block) int {
-	name := block.Args[0].Name
-	value := r.Eval(block.Args[1])
-	r.varStack[0][name] = value
-	return value
-}
-
-// builtinInput : get input from stdin and assign to local variable
-func (r *runtime) builtinInput(block *Block) int {
-	name := block.Args[0].Name
-	var value int
-	_, err := fmt.Scan(&value)
-	if err != nil {
-		panic(err)
-	}
-	r.varStack[len(r.varStack)-1][name] = value
-	return 0
-}
-
-func (r *runtime) builtinLambda(block *Block) int {
-	id := len(r.funcImplDict)
-	name := fmt.Sprintf("_lambda_%d", id)
-
-	var paramNameList []string
-	for i := 0; i < len(block.Args)-1; i++ {
-		paramNameList = append(paramNameList, block.Args[i].Name)
-	}
-	r.funcImplDict[name] = funcImpl{
-		paramNameList:  paramNameList,
-		implementation: block.Args[len(block.Args)-1],
-	}
-
-	return id
-}
-
-// builtinFunc : function definition, save function implementation
-func (r *runtime) builtinFunc(block *Block) int {
-	name := block.Args[0].Name
-	var paramNameList []string
-	for i := 1; i < len(block.Args)-1; i++ {
-		paramNameList = append(paramNameList, block.Args[i].Name)
-	}
-	r.funcImplDict[name] = funcImpl{
-		paramNameList:  paramNameList,
-		implementation: block.Args[len(block.Args)-1],
-	}
-	return 0
-}
-
-// builtinAdd : sum
-func (r *runtime) builtinAdd(block *Block) int {
-	value := 0
-	// evaluate all arguments then return the sum
-	// NOTE : if functions are pure, this can be done in parallel
-	for _, arg := range block.Args {
-		value += r.Eval(arg)
-	}
-	return value
-}
-
-// builtinTail : similar to sum but get the last one
-func (r *runtime) builtinTail(block *Block) int {
-	value := 0
-	// evaluate all arguments then return the last one
-	// NOTE : if functions are pure, this can be done in parallel
-	for _, arg := range block.Args {
-		value = r.Eval(arg)
-	}
-	return value
-}
-
-// builtinSub : subtract
-func (r *runtime) builtinSub(block *Block) int {
-	// subtraction
-	return r.Eval(block.Args[0]) - r.Eval(block.Args[1])
-}
-
-// builtinSign : sign function
-func (r *runtime) builtinSign(block *Block) int {
-	value := r.Eval(block.Args[0])
-	switch {
-	case value > 0:
-		return +1
-	case value < 0:
-		return -1
+	case LambdaExpr:
+		switch expr.Name {
+		case "output":
+			for _, arg := range expr.Args {
+				v := r.Step(arg)
+				fmt.Printf("%v ", v)
+			}
+			fmt.Println()
+			return len(expr.Args)
+		case "let":
+			name := expr.Args[0].(string)
+			v := r.Step(expr.Args[1])
+			r.stack[len(r.stack)-1][name] = v
+			return v
+		case "input":
+			name := expr.Args[0].(string)
+			var v int
+			_, err := fmt.Scanf("%d", &v)
+			if err != nil {
+				panic(err)
+			}
+			r.stack[len(r.stack)-1][name] = v
+			return v
+		case "lambda":
+			v := lambda{
+				params: nil,
+				impl:   nil,
+				frame:  nil,
+			}
+			for i := 0; i < len(expr.Args)-1; i++ {
+				paramName := expr.Args[i].(string)
+				v.params = append(v.params, paramName)
+			}
+			v.impl = expr.Args[len(expr.Args)-1]
+			v.frame = make(frame).update(r.stack[len(r.stack)-1])
+			return v
+		case "case":
+			cond := r.Step(expr.Args[0])
+			i := func() int {
+				for i := 1; i < len(expr.Args); i += 2 {
+					if arg, ok := expr.Args[i].(string); ok && arg == "_" {
+						return i
+					}
+					if r.Step(expr.Args[i]) == cond {
+						return i
+					}
+				}
+				panic("runtime error")
+			}()
+			return r.Step(expr.Args[i+1])
+		case "sign":
+			v := r.Step(expr.Args[0]).(int)
+			switch {
+			case v > 0:
+				return +1
+			case v < 0:
+				return -1
+			case v == 0:
+				return 0
+			}
+		case "sub":
+			a := r.Step(expr.Args[0]).(int)
+			b := r.Step(expr.Args[1]).(int)
+			return a - b
+		case "add":
+			v := 0
+			for _, arg := range expr.Args {
+				v += r.Step(arg).(int)
+			}
+			return v
+		case "tail":
+			var v Return
+			for _, arg := range expr.Args {
+				v = r.Step(arg)
+			}
+			return v
+		default: // function application
+			// 1. get func recursively
+			f := func() lambda {
+				for i := len(r.stack) - 1; i >= 0; i-- {
+					if f, ok := r.stack[i][expr.Name]; ok {
+						if DETECT_NONPURE && i != 0 && i < len(r.stack)-1 {
+							_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
+						}
+						return f.(lambda)
+					}
+				}
+				panic("runtime error")
+			}()
+			// 1. evaluate arguments
+			var args []Return
+			for _, arg := range expr.Args {
+				args = append(args, r.Step(arg))
+			}
+			// 2. add argument to local frame
+			localFrame := make(frame).update(f.frame)
+			for i := 0; i < len(f.params); i++ {
+				localFrame[f.params[i]] = args[i]
+			}
+			// 3. push frame to stack
+			r.stack = append(r.stack, localFrame)
+			// 4. exec function
+			v := r.Step(f.impl)
+			// 5. pop frame from stack
+			r.stack = r.stack[:len(r.stack)-1]
+			return v
+		}
 	default:
-		return 0
+		panic("runtime error")
 	}
+	panic("runtime error")
 }
 ./pkg/fp/ast.go
 package fp
@@ -414,6 +348,13 @@ type Block struct {
 	Type string
 	Name string
 	Args []*Block
+}
+
+// Expr : union of string, LambdaExpr
+type Expr interface{}
+type LambdaExpr struct {
+	Name string
+	Args []Expr
 }
 ./pkg/fp/parser.go
 package fp
@@ -448,42 +389,37 @@ func Tokenize(str string) []Token {
 	return fields
 }
 
-func ParseMany(tokenList []Token) ([]*Block, []Token) {
-	var block *Block
-	var blockList []*Block
+func ParseMany(tokenList []Token) ([]Expr, []Token) {
+	var expr Expr
+	var exprList []Expr
 	for {
 		if len(tokenList) == 0 || peak(tokenList) == ")" {
 			break
 		}
-		block, tokenList = parse(tokenList)
-		blockList = append(blockList, block)
+		expr, tokenList = parse(tokenList)
+		exprList = append(exprList, expr)
 	}
-	return blockList, tokenList
+	return exprList, tokenList
 }
 
-func parse(tokenList []Token) (*Block, []Token) {
+func parse(tokenList []Token) (Expr, []Token) {
 	if len(tokenList) == 0 {
 		return nil, nil
 	}
-	tokenList, head := pop(tokenList) // pop ( or [ or name
-	switch head {
-	case "(":
+	tokenList, head := pop(tokenList) // pop ( or name
+	if head == "(" {
 		tokenList, funcName := pop(tokenList)
-		blockList, tokenList := ParseMany(tokenList)
+		exprList, tokenList := ParseMany(tokenList)
 		tokenList, tail := pop(tokenList) // pop )
 		if tail != ")" {
 			panic("parse error")
 		}
-		return &Block{
-			Type: BLOCKTYPE_EXPR,
+		return LambdaExpr{
 			Name: funcName,
-			Args: blockList,
+			Args: exprList,
 		}, tokenList
-	default:
-		return &Block{
-			Type: BLOCKTYPE_NAME,
-			Name: head,
-		}, tokenList
+	} else {
+		return head, tokenList
 	}
 }
 do you have any comment on this?

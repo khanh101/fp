@@ -14,13 +14,13 @@ func main() {
 	str := string(buffer)
 	tokenList := fp.Tokenize(str)
 
-	blockList, tokenList := fp.ParseMany(tokenList)
+	exprList, tokenList := fp.ParseMany(tokenList)
 	if len(tokenList) > 0 {
 		panic("parse error")
 	}
 
 	r := fp.NewRuntime()
-	for _, block := range blockList {
-		r.Eval(block)
+	for _, expr := range exprList {
+		r.Step(expr)
 	}
 }

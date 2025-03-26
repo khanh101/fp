@@ -30,41 +30,36 @@ func Tokenize(str string) []Token {
 	return fields
 }
 
-func ParseMany(tokenList []Token) ([]*Block, []Token) {
-	var block *Block
-	var blockList []*Block
+func ParseMany(tokenList []Token) ([]Expr, []Token) {
+	var expr Expr
+	var exprList []Expr
 	for {
 		if len(tokenList) == 0 || peak(tokenList) == ")" {
 			break
 		}
-		block, tokenList = parse(tokenList)
-		blockList = append(blockList, block)
+		expr, tokenList = parse(tokenList)
+		exprList = append(exprList, expr)
 	}
-	return blockList, tokenList
+	return exprList, tokenList
 }
 
-func parse(tokenList []Token) (*Block, []Token) {
+func parse(tokenList []Token) (Expr, []Token) {
 	if len(tokenList) == 0 {
 		return nil, nil
 	}
-	tokenList, head := pop(tokenList) // pop ( or [ or name
-	switch head {
-	case "(":
+	tokenList, head := pop(tokenList) // pop ( or name
+	if head == "(" {
 		tokenList, funcName := pop(tokenList)
-		blockList, tokenList := ParseMany(tokenList)
+		exprList, tokenList := ParseMany(tokenList)
 		tokenList, tail := pop(tokenList) // pop )
 		if tail != ")" {
 			panic("parse error")
 		}
-		return &Block{
-			Type: BLOCKTYPE_EXPR,
+		return LambdaExpr{
 			Name: funcName,
-			Args: blockList,
+			Args: exprList,
 		}, tokenList
-	default:
-		return &Block{
-			Type: BLOCKTYPE_NAME,
-			Name: head,
-		}, tokenList
+	} else {
+		return head, tokenList
 	}
 }

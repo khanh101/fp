@@ -16,7 +16,7 @@ I haven't implemented it yet, but the idea is as follows
 - we have to handle function locally, that is save `funcImpl` into callstack, if a function is returned, pass it into parent's stack.
 
 
-since I almost don't gain anything from doing this, I'll keep it simple for now, no higher-order function
+since the language is Turing complete and I almost don't gain anything from doing this, I'll keep it simple for now, no higher-order function
 
 
 ## language specs

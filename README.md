@@ -12,8 +12,8 @@ I haven't implemented it yet, but the idea is as follows
     - match the integer with a function of 2 parameters, let's say `sub`
     - make new `funcImpl` from `sub`, save evaluation of `y` into `funcImpl`
 
-- whenever `(myfunc z)` is evaluated, apply all partial arguments
-- however, one has to handle functions declared locally. So, high-order functions will make the implementation more complicated
+- whenever `(myfunc z)` is evaluated, apply all partial arguments.
+- if we assume that all functions are pure, we just need to hold a collection of all functions
 
 
 ## language specs

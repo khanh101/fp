@@ -53,7 +53,7 @@ no 😅
                                                                (use to declare local variables, do multistep calculation)
 ```
 
-- extension functions: `div, print, input, json_add_field, make_list, append_list`
+- extension functions: `div, print, input, make_list, append_list`
 
 - wildcard symbol: `_` is a special symbol used in `case` to mark every other cases
 - no match is `case` is an undefined behavior
@@ -154,15 +154,7 @@ no 😅
 
 (print (div 6 2))                                      // test extension
 
-(print 'hello word')
-(let data '{
-    "name": "khanh",
-    "age": 28
-}')
-(let data (json_add_field data 'subject' 'math'))        // test json extension
-(print data)
-
-(let l (make_list 1 2 3 'hello' -7))                        // test list
+(let l (make_list 1 2 3 5 -7))                        // test list
 (let l (append_list l 6))
 (print l)
 

@@ -24,6 +24,10 @@ _list is a vector of integers is_ $\mathbb{Z}^{\mathbb{N}} \cong \mathbb{Z}$ _so
 
 _floating point is useful_
 
+## How to handle infix operator?
+
+translate '[<expr_1> <name> <expr_2>]' into '(<name> <expr_1> <expr_2>'
+
 ## But can it run Doom?
 
 no 😅

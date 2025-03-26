@@ -49,6 +49,14 @@ func main() {
 			panic(err)
 		}
 		return string(b)
+	}).WithExtension("make_list", func(nums ...fp.Value) fp.Value {
+		var v []fp.Value
+		for _, num := range nums {
+			v = append(v, num)
+		}
+		return v
+	}).WithExtension("append_list", func(nums ...fp.Value) fp.Value {
+		return append(nums[0].([]fp.Value), nums[1:]...)
 	})
 	for _, expr := range exprList {
 		r.Step(expr)

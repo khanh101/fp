@@ -49,6 +49,8 @@ func (f frame) update(otherFrame frame) frame {
 	return f
 }
 
+// Step - implement minimal set of instructions for the language to be Turing complete
+// let, lambda, case, sign, sub, add, tail
 func (r *runtime) Step(expr Expr) Value {
 	switch expr := expr.(type) {
 	case String:

@@ -222,6 +222,14 @@ func main() {
 			panic(err)
 		}
 		return string(b)
+	}).WithExtension("make_list", func(nums ...fp.Value) fp.Value {
+		var v []fp.Value
+		for _, num := range nums {
+			v = append(v, num)
+		}
+		return v
+	}).WithExtension("append_list", func(nums ...fp.Value) fp.Value {
+		return append(nums[0].([]fp.Value), nums[1:]...)
 	})
 	for _, expr := range exprList {
 		r.Step(expr)
@@ -279,6 +287,8 @@ func (f frame) update(otherFrame frame) frame {
 	return f
 }
 
+// Step - implement minimal set of instructions for the language to be Turing complete
+// let, lambda, case, sign, sub, add, tail
 func (r *runtime) Step(expr Expr) Value {
 	switch expr := expr.(type) {
 	case String:

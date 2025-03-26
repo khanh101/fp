@@ -99,6 +99,10 @@
 (let data (json_add_field data 'subject' 'math'))        // test json extension
 (output data)
 
+(let l (make_list 1 2 3 'hello' -7))                        // test list
+(let l (append_list l 6))
+(output l)
+
 (let x (input))                                           // waiting for user input
 (output (fibonacci x) 11)                                // print the x-th fibonacci
 

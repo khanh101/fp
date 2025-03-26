@@ -96,9 +96,9 @@
     "name": "khanh",
     "age": 28
 }')
-(let data (json_add_field data 'subject' 'math'))                       // test json
+(let data (json_add_field data 'subject' 'math'))        // test json extension
 (output data)
 
-(let x (input))                                               // waiting for user input
+(let x (input))                                           // waiting for user input
 (output (fibonacci x) 11)                                // print the x-th fibonacci
 

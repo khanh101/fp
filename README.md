@@ -13,7 +13,7 @@ I haven't implemented it yet, but the idea is as follows
     - make new `funcImpl` from `sub`, save evaluation of `y` into `funcImpl`
 
 - whenever `(myfunc z)` is evaluated, apply all partial arguments.
-- if we assume that all functions are pure, we just need to hold a collection of all functions
+- if we assume that all functions are pure, we just need to hold a collection of all `funcImpl`
 
 
 ## language specs

@@ -32,6 +32,8 @@ translate `[<expr_1> <name> <expr_2>]` into `(<name> <expr_1> <expr_2>)`
 
 yes, however, in code, functions are global only while variables are local. it is possible to implement local functions so that we can drop `let` and use only `func` keyword for both functions and variables and interpret variable as a function of zero parameters, however if `x` is defined locally, `func f (x + 3)` and `let f (x + 3)` are different since variables are evaluated at definition but functions are only evaluated when it is called, that is if we pass `f` outside of the function, it no longer valid. in the code below, i gave an example with `(let x_v (output 2 5))` and `(func x_f (output 2 6))`
 
+if functions are pure, they don't have that problem. consider `(let x <expr>)` as a pure function of the form `(func x <expr>)` but using different keywords
+
 ## But can it run Doom?
 
 no 😅

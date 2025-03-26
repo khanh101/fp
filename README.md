@@ -29,7 +29,7 @@ It has not yet been implemented, but it is quite simple. When doing function app
 ```
 
 - wildcard symbol: `_` is a special symbol used in `case` to mark every other cases
-- there is no match is `case` is an undefined behavior
+- no match is `case` is an undefined behavior
 
 ## a simple program
 

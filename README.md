@@ -28,6 +28,10 @@ _floating point is useful_
 
 translate `[<expr_1> <name> <expr_2>]` into `(<name> <expr_1> <expr_2>)`
 
+## Isn't `(let x 3)` equivalent to `(func x 3)`?
+
+yes, however, in code, functions are global only while variables are local. it is possible to implement local functions so that we can drop `let` and use only `func` keyword for both functions and variables and interpret variable as a function of zero parameters, however if `x` is defined locally, `func f (x + 3)` and `let f (x + 3)` are different since variables are evaluated at definition but functions are only evaluated when it is called, that is if we pass `f` outside of the function, it no longer valid.
+
 ## But can it run Doom?
 
 no 😅

@@ -13,7 +13,7 @@ floating point is useful
 
 ## How to handle infix operator?
 
-translate `[<expr_1> <name> <expr_2>]` into `(<name> <expr_1> <expr_2>)` - not yet implemented
+translate `[<expr_1> <name_1> <expr_2> <name_2> <expr_3>]` into `(<name_1> <expr_1> (<name_2> <expr_2> <expr_3>))`
 
 ## Isn't `(let x 3)` equivalent to `(let x (lambda 3))`?
 
@@ -44,7 +44,7 @@ no 😅
     - name is evaluated using a pool of variables; in code, it is `varStack`. if a name is not of a variable name declared using `let` or `input`, it is undefined behavior
     - expression is evaluated using its name
 
-- builtin functions: `let, func, case, sign, add, sub, tail, input, output, lambda, global`
+- builtin functions: `let (or ;), lambda (or =>), case, sign, add (or +), sub (or -), tail, input, output`
 ```
 (let <name> <expr>)                                          - assign value of <expr> into local variable <name>
 (lambda <name_1> ... <name_n> <expr>)                        - declare an anonymous function

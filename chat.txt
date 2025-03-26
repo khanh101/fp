@@ -15,7 +15,7 @@ floating point is useful
 
 ## How to handle infix operator?
 
-translate `[<expr_1> <name> <expr_2>]` into `(<name> <expr_1> <expr_2>)` - not yet implemented
+translate `[<expr_1> <name_1> <expr_2> <name_2> <expr_3>]` into `(<name_1> <expr_1> (<name_2> <expr_2> <expr_3>))`
 
 ## Isn't `(let x 3)` equivalent to `(let x (lambda 3))`?
 
@@ -46,7 +46,7 @@ no 😅
     - name is evaluated using a pool of variables; in code, it is `varStack`. if a name is not of a variable name declared using `let` or `input`, it is undefined behavior
     - expression is evaluated using its name
 
-- builtin functions: `let, func, case, sign, add, sub, tail, input, output, lambda, global`
+- builtin functions: `let (or ;), lambda (or =>), case, sign, add (or +), sub (or -), tail, input, output`
 ```
 (let <name> <expr>)                                          - assign value of <expr> into local variable <name>
 (lambda <name_1> ... <name_n> <expr>)                        - declare an anonymous function
@@ -233,7 +233,7 @@ func (r *newRuntime) Step(expr Expr) Return {
 			}
 			fmt.Println()
 			return len(expr.Args)
-		case "let":
+		case "let", ":=":
 			name := expr.Args[0].(string)
 			v := r.Step(expr.Args[1])
 			r.stack[len(r.stack)-1][name] = v
@@ -247,7 +247,7 @@ func (r *newRuntime) Step(expr Expr) Return {
 			}
 			r.stack[len(r.stack)-1][name] = v
 			return v
-		case "lambda":
+		case "lambda", "=>":
 			v := lambda{
 				params: nil,
 				impl:   nil,
@@ -284,17 +284,17 @@ func (r *newRuntime) Step(expr Expr) Return {
 			case v == 0:
 				return 0
 			}
-		case "sub":
+		case "sub", "-":
 			a := r.Step(expr.Args[0]).(int)
 			b := r.Step(expr.Args[1]).(int)
 			return a - b
-		case "add":
+		case "add", "+":
 			v := 0
 			for _, arg := range expr.Args {
 				v += r.Step(arg).(int)
 			}
 			return v
-		case "tail":
+		case "tail", ";":
 			var v Return
 			for _, arg := range expr.Args {
 				v = r.Step(arg)
@@ -393,7 +393,7 @@ func ParseMany(tokenList []Token) ([]Expr, []Token) {
 	var expr Expr
 	var exprList []Expr
 	for {
-		if len(tokenList) == 0 || peak(tokenList) == ")" {
+		if len(tokenList) == 0 || peak(tokenList) == ")" || peak(tokenList) == "]" {
 			break
 		}
 		expr, tokenList = parse(tokenList)
@@ -406,8 +406,9 @@ func parse(tokenList []Token) (Expr, []Token) {
 	if len(tokenList) == 0 {
 		return nil, nil
 	}
-	tokenList, head := pop(tokenList) // pop ( or name
-	if head == "(" {
+	tokenList, head := pop(tokenList) // pop ( or [ or name
+	switch head {
+	case "(":
 		tokenList, funcName := pop(tokenList)
 		exprList, tokenList := ParseMany(tokenList)
 		tokenList, tail := pop(tokenList) // pop )
@@ -418,7 +419,27 @@ func parse(tokenList []Token) (Expr, []Token) {
 			Name: funcName,
 			Args: exprList,
 		}, tokenList
-	} else {
+	case "[":
+		exprList, tokenList := ParseMany(tokenList)
+		tokenList, tail := pop(tokenList) // pop )
+		if tail != "]" {
+			panic("parse error")
+		}
+		var parseInfix func(exprList []Expr) Expr
+		parseInfix = func(exprList []Expr) Expr {
+			if len(exprList) == 0 || len(exprList) == 2 {
+				panic("parse error")
+			}
+			if len(exprList) == 1 {
+				return exprList[0]
+			}
+			return LambdaExpr{
+				Name: exprList[1].(string),
+				Args: append([]Expr{}, exprList[0], parseInfix(exprList[2:])),
+			}
+		}
+		return parseInfix(exprList), tokenList
+	default:
 		return head, tokenList
 	}
 }

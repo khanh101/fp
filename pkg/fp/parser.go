@@ -34,7 +34,7 @@ func ParseMany(tokenList []Token) ([]Expr, []Token) {
 	var expr Expr
 	var exprList []Expr
 	for {
-		if len(tokenList) == 0 || peak(tokenList) == ")" {
+		if len(tokenList) == 0 || peak(tokenList) == ")" || peak(tokenList) == "]" {
 			break
 		}
 		expr, tokenList = parse(tokenList)
@@ -47,8 +47,9 @@ func parse(tokenList []Token) (Expr, []Token) {
 	if len(tokenList) == 0 {
 		return nil, nil
 	}
-	tokenList, head := pop(tokenList) // pop ( or name
-	if head == "(" {
+	tokenList, head := pop(tokenList) // pop ( or [ or name
+	switch head {
+	case "(":
 		tokenList, funcName := pop(tokenList)
 		exprList, tokenList := ParseMany(tokenList)
 		tokenList, tail := pop(tokenList) // pop )
@@ -59,7 +60,27 @@ func parse(tokenList []Token) (Expr, []Token) {
 			Name: funcName,
 			Args: exprList,
 		}, tokenList
-	} else {
+	case "[":
+		exprList, tokenList := ParseMany(tokenList)
+		tokenList, tail := pop(tokenList) // pop )
+		if tail != "]" {
+			panic("parse error")
+		}
+		var parseInfix func(exprList []Expr) Expr
+		parseInfix = func(exprList []Expr) Expr {
+			if len(exprList) == 0 || len(exprList) == 2 {
+				panic("parse error")
+			}
+			if len(exprList) == 1 {
+				return exprList[0]
+			}
+			return LambdaExpr{
+				Name: exprList[1].(string),
+				Args: append([]Expr{}, exprList[0], parseInfix(exprList[2:])),
+			}
+		}
+		return parseInfix(exprList), tokenList
+	default:
 		return head, tokenList
 	}
 }

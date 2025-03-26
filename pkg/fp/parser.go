@@ -34,7 +34,7 @@ func ParseMany(tokenList []Token) ([]*Block, []Token) {
 	var block *Block
 	var blockList []*Block
 	for {
-		if len(tokenList) == 0 || peak(tokenList) == ")" || peak(tokenList) == "]" {
+		if len(tokenList) == 0 || peak(tokenList) == ")" {
 			break
 		}
 		block, tokenList = parse(tokenList)
@@ -59,17 +59,6 @@ func parse(tokenList []Token) (*Block, []Token) {
 		return &Block{
 			Type: BLOCKTYPE_FUNCTION,
 			Name: funcName,
-			Args: blockList,
-		}, tokenList
-	case "[":
-		blockList, tokenList := ParseMany(tokenList)
-		tokenList, tail := pop(tokenList) // pop )
-		if tail != "]" {
-			panic("parse error")
-		}
-		return &Block{
-			Type: BLOCKTYPE_LIST,
-			Name: "",
 			Args: blockList,
 		}, tokenList
 	default:

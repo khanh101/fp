@@ -13,7 +13,7 @@
 
 // define multiplication
 (
-    func mul [x y] (                                    // mul: [x y] -> xy
+    func mul x y (                                    // mul: [x y] -> xy
         case (sign y)
             0 0                                         // if y = 0, return 0
             -1 (sub 0 (mul x (sub 0 y)))                // if y < 0, return 0 - x(-y)
@@ -23,7 +23,7 @@
 
 // define modulo
 (
-    func mod [x y] (tail                                // mul: [x y] -> x % y // defined only for positive y
+    func mod x y (tail                                // mul: [x y] -> x % y // defined only for positive y
         (let z (sub x y))                               // local var z = x - y
         (output z x y 6)                                // print local value of z (with label 6)
         (
@@ -38,7 +38,7 @@
 // define fibonacci
 
 (
-    func fibonacci [x] (
+    func fibonacci x (
         case (sign (sub x 1))
         1 (add (fibonacci (sub x 1)) (fibonacci (sub x 2)))
         _ x

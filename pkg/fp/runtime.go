@@ -133,13 +133,13 @@ func (r *Runtime) builtinInput(block *Block) int {
 }
 func (r *Runtime) builtinFunc(block *Block) int {
 	name := block.Args[0].Name
-	params := []string{}
-	for _, param := range block.Args[1].Args {
-		params = append(params, param.Name)
+	var paramNameList []string
+	for i := 1; i < len(block.Args)-1; i++ {
+		paramNameList = append(paramNameList, block.Args[i].Name)
 	}
 	r.FuncMap[name] = Func{
-		ParamNameList:  params,
-		Implementation: block.Args[2],
+		ParamNameList:  paramNameList,
+		Implementation: block.Args[len(block.Args)-1],
 	}
 	return 0
 }

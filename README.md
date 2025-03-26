@@ -102,7 +102,15 @@ no 😅
 (output z 1)                                            // print z=20 (with label 1)
 (output (mul 13 -17) 2)                                 // print 13 * (-17) (with label 2)
 (output (mod 17  13) 3)                                 // print 17 % 13 (with label 3)
-(output z 4)                                            // print z=20 again (with label 1), verify that the other z is an actual local variable
+(output z 4)                                            // print z=20 again (with label 4), verify that the other z is an actual local variable
+
+(let x_v (output 2 5))                                  // declare x_v - (output 2 5) is executed immediately
+(func x_f (output 2 6))                                 // declare x_v - (output 2 6) is not executed immediately
+(output 7)                                              // for debugging
+(x_f)                                                   // apply x_f - (output 2 6) is executed
+
+
 (input x)                                               // waiting for user input
-(output (fibonacci x) 5)                                // print the x-th fibonacci (with label 5)
+(output (fibonacci x) 8)                                // print the x-th fibonacci (with label 5)
+
 ```

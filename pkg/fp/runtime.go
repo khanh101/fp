@@ -80,39 +80,7 @@ func (r *runtime) Eval(block *Block) int {
 	}
 }
 
-func (r *runtime) builtinSign(block *Block) int {
-	value := r.Eval(block.Args[0])
-	switch {
-	case value > 0:
-		return +1
-	case value < 0:
-		return -1
-	default:
-		return 0
-	}
-}
-
-func (r *runtime) builtinTail(block *Block) int {
-	value := 0
-	// evaluate all arguments then return the last one
-	for _, arg := range block.Args {
-		value = r.Eval(arg)
-	}
-	return value
-}
-func (r *runtime) builtinAdd(block *Block) int {
-	value := 0
-	// evaluate all arguments then return the sum
-	for _, arg := range block.Args {
-		value += r.Eval(arg)
-	}
-	return value
-}
-func (r *runtime) builtinSub(block *Block) int {
-	// subtraction
-	return r.Eval(block.Args[0]) - r.Eval(block.Args[1])
-}
-
+// builtinCase : process cases
 func (r *runtime) builtinCase(block *Block) int {
 	cond := r.Eval(block.Args[0])
 	i := func(cond int, args []*Block) int {
@@ -133,6 +101,7 @@ func (r *runtime) builtinCase(block *Block) int {
 	return r.Eval(block.Args[i+1])
 }
 
+// builtinOutput : evaluate the list of expressions and print
 func (r *runtime) builtinOutput(block *Block) int {
 	for _, arg := range block.Args {
 		fmt.Printf("%d ", r.Eval(arg))
@@ -141,12 +110,15 @@ func (r *runtime) builtinOutput(block *Block) int {
 	return len(block.Args)
 }
 
+// builtinLet : evaluate the expression and assign to local variable
 func (r *runtime) builtinLet(block *Block) int {
 	name := block.Args[0].Name
 	value := r.Eval(block.Args[1])
 	r.varDictStack[len(r.varDictStack)-1][name] = value
 	return value
 }
+
+// builtinInput : get input from stdin and assign to local variable
 func (r *runtime) builtinInput(block *Block) int {
 	name := block.Args[0].Name
 	var value int
@@ -157,6 +129,8 @@ func (r *runtime) builtinInput(block *Block) int {
 	r.varDictStack[len(r.varDictStack)-1][name] = value
 	return 0
 }
+
+// builtinFunc : function definition, save function implementation
 func (r *runtime) builtinFunc(block *Block) int {
 	name := block.Args[0].Name
 	var paramNameList []string
@@ -168,4 +142,43 @@ func (r *runtime) builtinFunc(block *Block) int {
 		implementation: block.Args[len(block.Args)-1],
 	}
 	return 0
+}
+
+// builtinAdd : sum
+func (r *runtime) builtinAdd(block *Block) int {
+	value := 0
+	// evaluate all arguments then return the sum
+	for _, arg := range block.Args {
+		value += r.Eval(arg)
+	}
+	return value
+}
+
+// builtinTail : similar to sum but get the last one
+func (r *runtime) builtinTail(block *Block) int {
+	value := 0
+	// evaluate all arguments then return the last one
+	for _, arg := range block.Args {
+		value = r.Eval(arg)
+	}
+	return value
+}
+
+// builtinSub : subtract
+func (r *runtime) builtinSub(block *Block) int {
+	// subtraction
+	return r.Eval(block.Args[0]) - r.Eval(block.Args[1])
+}
+
+// builtinSign : sign function
+func (r *runtime) builtinSign(block *Block) int {
+	value := r.Eval(block.Args[0])
+	switch {
+	case value > 0:
+		return +1
+	case value < 0:
+		return -1
+	default:
+		return 0
+	}
 }

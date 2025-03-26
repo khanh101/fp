@@ -177,7 +177,7 @@ func main() {
 	str := string(buffer)
 	tokenList := fp.Tokenize(str)
 
-	exprList, tokenList := fp.ParseMany(tokenList)
+	exprList, tokenList := fp.ParseAll(tokenList)
 	if len(tokenList) > 0 {
 		panic("parse error")
 	}
@@ -410,7 +410,7 @@ func Tokenize(str string) []Token {
 	return fields
 }
 
-func ParseMany(tokenList []Token) ([]Expr, []Token) {
+func ParseAll(tokenList []Token) ([]Expr, []Token) {
 	var expr Expr
 	var exprList []Expr
 	for {
@@ -431,7 +431,7 @@ func parse(tokenList []Token) (Expr, []Token) {
 	switch head {
 	case "(":
 		tokenList, funcName := pop(tokenList)
-		exprList, tokenList := ParseMany(tokenList)
+		exprList, tokenList := ParseAll(tokenList)
 		tokenList, tail := pop(tokenList) // pop )
 		if tail != ")" {
 			panic("parse error")

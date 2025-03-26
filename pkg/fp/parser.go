@@ -28,7 +28,7 @@ func Tokenize(str string) []Token {
 	return fields
 }
 
-func ParseMany(tokenList []Token) ([]Expr, []Token) {
+func ParseAll(tokenList []Token) ([]Expr, []Token) {
 	var expr Expr
 	var exprList []Expr
 	for {
@@ -49,7 +49,7 @@ func parse(tokenList []Token) (Expr, []Token) {
 	switch head {
 	case "(":
 		tokenList, funcName := pop(tokenList)
-		exprList, tokenList := ParseMany(tokenList)
+		exprList, tokenList := ParseAll(tokenList)
 		tokenList, tail := pop(tokenList) // pop )
 		if tail != ")" {
 			panic("parse error")

@@ -14,7 +14,7 @@ func main() {
 	str := string(buffer)
 	tokenList := fp.Tokenize(str)
 
-	exprList, tokenList := fp.ParseMany(tokenList)
+	exprList, tokenList := fp.ParseAll(tokenList)
 	if len(tokenList) > 0 {
 		panic("parse error")
 	}

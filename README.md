@@ -11,11 +11,10 @@ floating point is useful
 
 ## How to handle infix operator?
 
-translate `[<expr_1> <name_1> <expr_2> <name_2> <expr_3>]` into `(<name_1> <expr_1> (<name_2> <expr_2> <expr_3>))` - todo
-
+translate `[<expr_1> <name_1> <expr_2> <name_2> <expr_3>]` into `(<name_1> <expr_1> (<name_2> <expr_2> <expr_3>))` - todo 
 ## Isn't `(let x 3)` equivalent to `(let x (lambda 3))`?
 
-yes, if functions are pure, then we can consider `(let x <expr>)` as a pure function of the form `(func x <expr>)`. 
+yes, if functions are pure, then we can consider `(let x <expr>)` as a pure function of the form `(let x (lambda <expr>))`. 
 however, if functions are not pure, if `x` is defined locally, `(let f (lambda (x + 3)))` and `let f (x + 3)` are different
 since variables are evaluated at definition but functions are only evaluated when it is called,
 that is if we pass `f` outside of the function, it no longer valid.

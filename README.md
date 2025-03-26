@@ -2,6 +2,10 @@
 
 A simple functional programming language in 150 lines of code
 
+
+## note: todo
+
+passing function as param has not been implemented yet but it is quite simple. when doing function application, instead of assume the first block is a name, we evaluate them, if it cannot be evaluated as a literal, it is a function name
 ## a simple program
 
 ```

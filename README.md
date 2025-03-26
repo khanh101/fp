@@ -20,9 +20,11 @@ _since the language is Turing complete and I almost don't gain anything from doi
 
 ## How to implement data structures like list, dict
 
-_list is a vector of integers is_ $\mathbb{Z}^{\mathbb{N}} \cong \mathbb{Z}$ _so we're done. Similarly for any other data structures
+list is a vector of integers is $\mathbb{Z}^{\mathbb{N}} \cong \mathbb{Z}$ so we're done. Similarly, for any other data structures
 
-_floating point is useful_
+it is also possible to define list as a function $\mathbb{N} \to \mathbb{Z}$, operation on list is composition of function
+
+floating point is useful
 
 ## How to handle infix operator?
 

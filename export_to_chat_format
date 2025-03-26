@@ -6,3 +6,5 @@ echo "README.md"
 cat README.md
 
 find . -name "*.go" -type f -print -exec cat {} \;
+
+echo "do you have any comment on this?"

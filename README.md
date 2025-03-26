@@ -24,6 +24,10 @@ _list is a vector of integers is_ $\mathbb{Z}^{\mathbb{N}} \cong \mathbb{Z}$ _so
 
 _floating point is useful_
 
+## But can it run Doom?
+
+no 😅
+
 ## language specs
 
 - name and expression: name is a string of characters, e.g. `x`, `mul`, and expression is enclosed with parentheses starting with a name, e.g `(let x 3)`, `(add 1 2)`

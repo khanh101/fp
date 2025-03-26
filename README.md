@@ -3,9 +3,9 @@
 A simple functional programming language in 150 lines of code
 
 
-## note: todo
+## todo - add passing function as argument
 
-passing function as param has not yet been implemented but is quite simple. when doing function application, instead of assuming the first block is a name (currently we set the value of first block to block.Name, we want to move it to block.Args[0]), if block.Args[0] cannot be evaluated as a literal, it is a function name
+It has not yet been implemented, but it is quite simple. When doing function application, instead of assuming the first block is a name (currently we set the name of the first block to block.Name (add 1 2) -> block.Name = add, block.Args is the two literals 1 2, we want to move it to block.Args[0]), if block.Args[0] cannot be evaluated as a literal, it is a function name
 ## a simple program
 
 ```

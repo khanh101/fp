@@ -34,7 +34,7 @@ func (r *runtime) Eval(block *Block) int {
 			return val
 		}
 		// find all variables from top frame to bottom frame
-		// pure function will find always find it at the top frame - can detect non-pure function
+		// NOTE: pure functions will find always find it at the top frame - can detect non-pure function
 		for i := len(r.varDictStack) - 1; i >= 0; i-- {
 			if val, ok := r.varDictStack[i][block.Name]; ok {
 				return val
@@ -149,6 +149,7 @@ func (r *runtime) builtinFunc(block *Block) int {
 func (r *runtime) builtinAdd(block *Block) int {
 	value := 0
 	// evaluate all arguments then return the sum
+	// NOTE : if functions are pure, this can be done in parallel
 	for _, arg := range block.Args {
 		value += r.Eval(arg)
 	}
@@ -159,6 +160,7 @@ func (r *runtime) builtinAdd(block *Block) int {
 func (r *runtime) builtinTail(block *Block) int {
 	value := 0
 	// evaluate all arguments then return the last one
+	// NOTE : if functions are pure, this can be done in parallel
 	for _, arg := range block.Args {
 		value = r.Eval(arg)
 	}

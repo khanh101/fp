@@ -44,6 +44,9 @@
 (output 7)                                              // for debugging
 (x_f)                                                   // apply x_f - (output 2 6) is executed
 
+(let f (lambda x (add x 1)))                            // define lambda
+(output f)                                              // print id of f
+(output (f 21) 8)                                       // print 21 + 1 using lambda
 
 (input x)                                               // waiting for user input
-(output (fibonacci x) 8)                                // print the x-th fibonacci (with label 5)
+(output (fibonacci x) 9)                                // print the x-th fibonacci (with label 5)

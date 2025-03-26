@@ -47,6 +47,8 @@ func (r *runtime) Eval(block *Block) int {
 			return r.builtinLet(block)
 		case "func":
 			return r.builtinFunc(block)
+		case "lambda":
+			return r.builtinLambda(block)
 		case "case":
 			return r.builtinCase(block)
 		case "input":
@@ -61,24 +63,44 @@ func (r *runtime) Eval(block *Block) int {
 			return r.builtinAdd(block)
 		case "sub":
 			return r.builtinSub(block)
-		default: // user-function application
-			f := r.funcImplDict[block.Name]
-			// evaluate argument
-			localVarDict := map[string]int{}
-			for i, arg := range block.Args {
-				localVarDict[f.paramNameList[i]] = r.Eval(arg)
-			}
-			// push new variable stack
-			r.varStack = append(r.varStack, localVarDict)
-			// evaluate implementation after having argument
-			val := r.Eval(f.implementation)
-			// pop from variable stack
-			r.varStack = r.varStack[:len(r.varStack)-1]
-			return val
+		default: // apply function
+			return r.applyFunc(block)
 		}
 	default:
 		panic("runtime error")
 	}
+}
+
+func (r *runtime) applyFunc(block *Block) int {
+	f := func(blockName string) funcImpl {
+		name := func(blockName string) string {
+			// find lambda first
+			// find all variables from top frame to bottom frame
+			// NOTE: pure functions will find always find it at the top frame - can detect non-pure function
+			for i := len(r.varStack) - 1; i >= 0; i-- {
+				if val, ok := r.varStack[i][block.Name]; ok {
+					return fmt.Sprintf("_lambda_%d", val)
+
+				}
+			}
+			// not a lambda, must be a function
+			return blockName
+		}(blockName)
+		return r.funcImplDict[name]
+	}(block.Name)
+
+	// evaluate argument
+	localVarDict := map[string]int{}
+	for i, arg := range block.Args {
+		localVarDict[f.paramNameList[i]] = r.Eval(arg)
+	}
+	// push new variable stack
+	r.varStack = append(r.varStack, localVarDict)
+	// evaluate implementation after having argument
+	val := r.Eval(f.implementation)
+	// pop from variable stack
+	r.varStack = r.varStack[:len(r.varStack)-1]
+	return val
 }
 
 // builtinCase : process cases
@@ -129,6 +151,22 @@ func (r *runtime) builtinInput(block *Block) int {
 	}
 	r.varStack[len(r.varStack)-1][name] = value
 	return 0
+}
+
+func (r *runtime) builtinLambda(block *Block) int {
+	id := len(r.funcImplDict)
+	name := fmt.Sprintf("_lambda_%d", id)
+
+	var paramNameList []string
+	for i := 0; i < len(block.Args)-1; i++ {
+		paramNameList = append(paramNameList, block.Args[i].Name)
+	}
+	r.funcImplDict[name] = funcImpl{
+		paramNameList:  paramNameList,
+		implementation: block.Args[len(block.Args)-1],
+	}
+
+	return id
 }
 
 // builtinFunc : function definition, save function implementation

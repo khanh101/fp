@@ -1,6 +1,6 @@
 # FP
 
-A simple functional programming language in 150 lines of code with `functions as first-class citizens`. $\mathbb{F}_p$ also denotes the finite field of order $p$ 
+A simple functional programming language in 130 lines of code with `functions as first-class citizens`. $\mathbb{F}_p$ also denotes the finite field of order $p$ 
 
 
 ## How to implement data structures like list, dict

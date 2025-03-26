@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"fp/pkg/fp"
 	"os"
@@ -25,7 +24,7 @@ func main() {
 			panic("runtime error")
 		}
 		return nums[0].(int) / nums[1].(int)
-	}).WithExtension("output", func(nums ...fp.Value) fp.Value {
+	}).WithExtension("print", func(nums ...fp.Value) fp.Value {
 		for _, num := range nums {
 			fmt.Printf("%v ", num)
 		}
@@ -38,17 +37,6 @@ func main() {
 			panic(err)
 		}
 		return v
-	}).WithExtension("json_add_field", func(nums ...fp.Value) fp.Value {
-		var v map[fp.String]fp.Value
-		if err := json.Unmarshal([]byte(nums[0].(fp.String)), &v); err != nil {
-			panic(err)
-		}
-		v[nums[1].(fp.String)] = nums[2]
-		var b []byte
-		if b, err = json.Marshal(v); err != nil {
-			panic(err)
-		}
-		return string(b)
 	}).WithExtension("make_list", func(nums ...fp.Value) fp.Value {
 		var v []fp.Value
 		for _, num := range nums {

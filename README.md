@@ -19,7 +19,7 @@ yes, if functions are pure, then we can consider `(let x <expr>)` as a pure func
 however, if functions are not pure, if `x` is defined locally, `(let f (lambda (x + 3)))` and `let f (x + 3)` are different
 since variables are evaluated at definition but functions are only evaluated when it is called,
 that is if we pass `f` outside of the function, it no longer valid.
-in the code below, i gave an example with `(let x_v (output 2 5))` and `(func x_f (output 2 6))`
+in the code below, i gave an example with `(let x_v (print 2 5))` and `(func x_f (print 2 6))`
 
 ## How to handle higher-order functions
 
@@ -54,7 +54,7 @@ no 😅
                                                                (use to declare local variables, do multistep calculation)
 ```
 
-- extension functions: `div, output, input, json_add_field, make_list, append_list`
+- extension functions: `div, print, input, json_add_field, make_list, append_list`
 
 - wildcard symbol: `_` is a special symbol used in `case` to mark every other cases
 - no match is `case` is an undefined behavior
@@ -78,7 +78,7 @@ no 😅
     (lambda x y
         (tail                                  // mul: (x y) -> x % y // defined only for positive y
             (let z (sub x y))                               // local var z = x - y
-            (output z x y 6)                                // print local value of z (with label 6)
+            (print z x y 6)                                // print local value of z (with label 6)
             (case (sign z)
                 +1 (mod z y)                                // if x > y, return (x - y) % y
                 0  0                                        // if x = y, return 0
@@ -126,49 +126,49 @@ no 😅
 )))
 
 (let z 20)
-(output z 1)                                            // print z=20 (with label 1)
-(output (mul 13 -17) 2)                                 // print 13 * (-17) (with label 2)
-(output (mod 17  13) 3)                                 // print 17 % 13 (with label 3)
-(output z 4)                                            // print z=20 again (with label 4), verify that the other z is an actual local variable
+(print z 1)                                            // print z=20 (with label 1)
+(print (mul 13 -17) 2)                                 // print 13 * (-17) (with label 2)
+(print (mod 17  13) 3)                                 // print 17 % 13 (with label 3)
+(print z 4)                                            // print z=20 again (with label 4), verify that the other z is an actual local variable
 
-(let x_v (output 2 5))                                  // declare x_v - (output 2 5) is executed immediately
-(let x_f (lambda (output 2 6)))                         // declare x_f - (output 2 6) is not executed immediately
-(output 7)                                              // for debugging
-(x_f)                                                   // apply x_f - (output 2 6) is executed
+(let x_v (print 2 5))                                  // declare x_v - (print 2 5) is executed immediately
+(let x_f (lambda (print 2 6)))                         // declare x_f - (print 2 6) is not executed immediately
+(print 7)                                              // for debugging
+(x_f)                                                   // apply x_f - (print 2 6) is executed
 
 (let f (lambda x (add x 1)))                            // define lambda
-(output f)                                              // print lambda
-(output (f 21) 8)                                       // print 21 + 1 using lambda
+(print f)                                              // print lambda
+(print (f 21) 8)                                       // print 21 + 1 using lambda
 
 (let t 3)
 (let add3 (addx t))                                     // partial function
-(output (add3 14) 9)
+(print (add3 14) 9)
 
 // dict example
 (let d (dict_new))                                      // new dict
 (let d (dict_set d 2 300))                                 // set value
 (let d (dict_set d 3 500))                                 // set value
 (let d (dict_set d 2 200))                                 // set value
-(output (dict_get d 2) 11)                                 // should print 200
+(print (dict_get d 2) 11)                                 // should print 200
 
 // end dict example
 
-(output (div 6 2))                                      // test extension
+(print (div 6 2))                                      // test extension
 
-(output 'hello word')
+(print 'hello word')
 (let data '{
     "name": "khanh",
     "age": 28
 }')
 (let data (json_add_field data 'subject' 'math'))        // test json extension
-(output data)
+(print data)
 
 (let l (make_list 1 2 3 'hello' -7))                        // test list
 (let l (append_list l 6))
-(output l)
+(print l)
 
 (let x (input))                                           // waiting for user input
-(output (fibonacci x) 11)                                // print the x-th fibonacci
+(print (fibonacci x) 11)                                // print the x-th fibonacci
 
 
 ```

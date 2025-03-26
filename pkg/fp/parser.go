@@ -1,7 +1,6 @@
 package fp
 
 import (
-	"regexp"
 	"strings"
 )
 
@@ -29,18 +28,7 @@ func Tokenize(str string) []Token {
 	str = strings.ReplaceAll(str, "(", " ( ")
 	str = strings.ReplaceAll(str, ")", " ) ")
 
-	splitBySpaceExceptQuotes := func(input string) []string {
-		// Regular expression to match sequences enclosed in single quotes or sequences of non-space characters
-		re := regexp.MustCompile(`'[^']*'|[^' ]+`)
-
-		// Find all matches
-		matches := re.FindAllString(input, -1)
-
-		return matches
-	}
-
-	fields := splitBySpaceExceptQuotes(str)
-	return fields
+	return strings.Fields(str)
 }
 
 func ParseAll(tokenList []Token) ([]Expr, []Token) {
@@ -74,10 +62,6 @@ func parse(tokenList []Token) (Expr, []Token) {
 			Args: exprList,
 		}, tokenList
 	default:
-		if head[0] == '\'' && head[len(head)-1] == '\'' {
-			return String(head[1 : len(head)-1]), tokenList
-		} else {
-			return Name(head), tokenList
-		}
+		return Name(head), tokenList
 	}
 }

@@ -53,8 +53,6 @@ func (f frame) update(otherFrame frame) frame {
 // let, lambda, case, sign, sub, add, tail
 func (r *runtime) Step(expr Expr) Value {
 	switch expr := expr.(type) {
-	case String:
-		return expr
 	case Name:
 		var v Value
 		// convert to number

@@ -54,10 +54,10 @@ no 😅
     - name is evaluated using a pool of variables; in code, it is `varDictStack`. if a name is not of a variable name declared using `let` or `input`, it is undefined behavior
     - expression is evaluated using its name
 
-- builtin functions: `let, func, case, sign, add, sub, tail, input, output`
+- builtin functions: `let, func, case, sign, add, sub, tail, input, output, lambda`
 ```
 (let <name> <expr>)                                          - assign value of <expr> into <name>, return 0
-(func <name> [<name_1> ... <name_n>] <expr>)                 - declare a function <name> with n parameters, return 0
+(func <name> <name_1> ... <name_n> <expr>)                   - declare a function <name> with n parameters, return 0
 (case <cond> <expr_1> <expr_2>... <key_{n-1}> <expr_n>)      - branching, if <cond> = <key_i> for i odd, return <expr_{i+1}>
 (sign <expr>)                                                - return (-1), 0, (+1) according to sign of <expr>
 (add <expr_1> ... <expr_n>)                                  - add
@@ -66,6 +66,7 @@ no 😅
                                                                (use to declare local variables, do multistep calculation)
 (input <name>)                                               - read stdin and assign into <name>
 (output <expr_1> ... <expr_n>                                - write to stdout
+(lambda <name_1> ... <name_n> <expr>)                        - declare an anonymous function and return its id
 ```
 
 - wildcard symbol: `_` is a special symbol used in `case` to mark every other cases

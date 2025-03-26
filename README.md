@@ -13,6 +13,7 @@ I haven't implemented it yet, but the idea is as follows
     - make new `funcImpl` from `sub`, save evaluation of `y` into `funcImpl`
 
 - whenever `(myfunc z)` is evaluated, apply all partial arguments
+- however, one has to handle functions declared locally, so it will make the implementation more complicated
 
 
 ## language specs

@@ -50,7 +50,7 @@ no 😅
 (sign <expr>)                                                - return (-1), 0, (+1) according to sign of <expr>
 (add <expr_1> ... <expr_n>)                                  - add
 (sub <expr_1> <expr_2>)                                      - subtract
-(tail <expr_1> ... <expr_n>                                  - evaluate all expressions then return the last one
+(tail <expr_1> ... <expr_n>)                                 - evaluate all expressions then return the last one
                                                                (use to declare local variables, do multistep calculation)
 (input <name>)                                               - read stdin and assign into <name>
 (output <expr_1> ... <expr_n>                                - write to stdout

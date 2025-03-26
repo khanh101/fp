@@ -10,12 +10,26 @@ const DETECT_NONPURE = true
 
 type Runtime interface {
 	Step(expr Expr) Value
+	WithExtension(name string, f func(...int) int) Runtime
 }
 
 func NewRuntime() Runtime {
-	return &newRuntime{stack: []frame{
-		make(frame),
-	}}
+	return &runtime{
+		stack: []frame{
+			make(frame),
+		},
+		extension: make(map[string]func(...int) int),
+	}
+}
+
+func (r *runtime) WithExtension(name string, f func(...int) int) Runtime {
+	r.extension[name] = f
+	return r
+}
+
+type runtime struct {
+	stack     []frame
+	extension map[string]func(...int) int
 }
 
 // Value : union of int and lambda - TODO : introduce new data types
@@ -35,11 +49,7 @@ func (f frame) update(otherFrame frame) frame {
 	return f
 }
 
-type newRuntime struct {
-	stack []frame
-}
-
-func (r *newRuntime) Step(expr Expr) Value {
+func (r *runtime) Step(expr Expr) Value {
 	switch expr := expr.(type) {
 	case string:
 		var v Value
@@ -134,6 +144,15 @@ func (r *newRuntime) Step(expr Expr) Value {
 			}
 			return v
 		default: // function application
+			// check for extension
+			if f, ok := r.extension[expr.Name]; ok {
+				var args []int
+				for _, arg := range expr.Args {
+					args = append(args, r.Step(arg).(int))
+				}
+				return f(args...)
+			}
+
 			// 1. get func recursively
 			f := func() lambda {
 				for i := len(r.stack) - 1; i >= 0; i-- {

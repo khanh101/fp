@@ -87,8 +87,10 @@
 (let d (dict_set d 2 200))                                 // set value
 (output (dict_get d 2) 11)                                 // should print 200
 
+// end dict example
 
-// end list example
+(output (div 6 2))                                      // test extension
+
 (input x)                                               // waiting for user input
 (output (fibonacci x) 11)                                // print the x-th fibonacci
 

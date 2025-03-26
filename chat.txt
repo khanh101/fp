@@ -52,7 +52,7 @@ no 😅
 (sign <expr>)                                                - return (-1), 0, (+1) according to sign of <expr>
 (add <expr_1> ... <expr_n>)                                  - add
 (sub <expr_1> <expr_2>)                                      - subtract
-(tail <expr_1> ... <expr_n>                                  - evaluate all expressions then return the last one
+(tail <expr_1> ... <expr_n>)                                 - evaluate all expressions then return the last one
                                                                (use to declare local variables, do multistep calculation)
 (input <name>)                                               - read stdin and assign into <name>
 (output <expr_1> ... <expr_n>                                - write to stdout
@@ -182,7 +182,12 @@ func main() {
 		panic("parse error")
 	}
 
-	r := fp.NewRuntime()
+	r := fp.NewRuntime().WithExtension("div", func(nums ...int) int {
+		if len(nums) != 2 {
+			panic("runtime error")
+		}
+		return nums[0] / nums[1]
+	})
 	for _, expr := range exprList {
 		r.Step(expr)
 	}
@@ -200,12 +205,26 @@ const DETECT_NONPURE = true
 
 type Runtime interface {
 	Step(expr Expr) Value
+	WithExtension(name string, f func(...int) int) Runtime
 }
 
 func NewRuntime() Runtime {
-	return &newRuntime{stack: []frame{
-		make(frame),
-	}}
+	return &runtime{
+		stack: []frame{
+			make(frame),
+		},
+		extension: make(map[string]func(...int) int),
+	}
+}
+
+func (r *runtime) WithExtension(name string, f func(...int) int) Runtime {
+	r.extension[name] = f
+	return r
+}
+
+type runtime struct {
+	stack     []frame
+	extension map[string]func(...int) int
 }
 
 // Value : union of int and lambda - TODO : introduce new data types
@@ -225,11 +244,7 @@ func (f frame) update(otherFrame frame) frame {
 	return f
 }
 
-type newRuntime struct {
-	stack []frame
-}
-
-func (r *newRuntime) Step(expr Expr) Value {
+func (r *runtime) Step(expr Expr) Value {
 	switch expr := expr.(type) {
 	case string:
 		var v Value
@@ -324,6 +339,15 @@ func (r *newRuntime) Step(expr Expr) Value {
 			}
 			return v
 		default: // function application
+			// check for extension
+			if f, ok := r.extension[expr.Name]; ok {
+				var args []int
+				for _, arg := range expr.Args {
+					args = append(args, r.Step(arg).(int))
+				}
+				return f(args...)
+			}
+
 			// 1. get func recursively
 			f := func() lambda {
 				for i := len(r.stack) - 1; i >= 0; i-- {

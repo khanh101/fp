@@ -19,7 +19,12 @@ func main() {
 		panic("parse error")
 	}
 
-	r := fp.NewRuntime()
+	r := fp.NewRuntime().WithExtension("div", func(nums ...int) int {
+		if len(nums) != 2 {
+			panic("runtime error")
+		}
+		return nums[0] / nums[1]
+	})
 	for _, expr := range exprList {
 		r.Step(expr)
 	}

@@ -32,8 +32,6 @@ higher-order function is already implemented
 if we assume functions are pure, one can consider the whole program as a set of expressions (with some dependencies of `let`)
 each function call only need its own variable scope, they can execute every expression at the same time (possibly with some waiting for `let` statement) 
 
-lambda is defined global, one can make it local so it won't use too much memory
-
 ## But can it run Doom?
 
 no 😅

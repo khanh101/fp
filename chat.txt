@@ -191,7 +191,7 @@ func main() {
 		panic("parse error")
 	}
 
-	r := fp.NewBasicRuntime().WithArithmeticExtension("div", func(nums ...fp.Object) fp.Object {
+	r := fp.NewBasicRuntime().WithOption(fp.DebugOption(true)).WithArithmeticExtension("div", func(nums ...fp.Object) fp.Object {
 		if len(nums) != 2 {
 			panic("runtime error")
 		}
@@ -220,7 +220,6 @@ func main() {
 	})
 	for _, expr := range exprList {
 		r.Step(expr)
-		fmt.Println(r)
 	}
 }
 ./pkg/fp/runtime_option.go
@@ -231,32 +230,58 @@ type stepOption struct {
 	tailCallOptimization bool
 }
 
-func defaultStepOption() *stepOption {
-	return &stepOption{
-		tailCallOptimization: false,
+type RuntimeOption func(*runtimeOption) *runtimeOption
+type runtimeOption struct {
+	debug     bool
+	parseName func(Name) (interface{}, error)
+}
+
+func ParseNameOption(f func(Name) (interface{}, error)) RuntimeOption {
+	return func(o *runtimeOption) *runtimeOption {
+		o.parseName = f
+		return o
 	}
 }
 
-func WithTailCallOptimization(o *stepOption) *stepOption {
-	o.tailCallOptimization = true // TODO - debug tailcall
-	return o
+func DebugOption(debug bool) RuntimeOption {
+	return func(o *runtimeOption) *runtimeOption {
+		o.debug = debug
+		return o
+	}
+}
+
+func TCOStepOption(tco bool) StepOption {
+	return func(o *stepOption) *stepOption {
+		o.tailCallOptimization = false // TODO - debug tailcall
+		return o
+	}
 }
 ./pkg/fp/runtime.go
 package fp
 
 import "strconv"
 
+func defaultRuntimeOption() *runtimeOption {
+	return &runtimeOption{
+		debug: false,
+		parseName: func(name Name) (interface{}, error) {
+			return strconv.Atoi(string(name))
+		},
+	}
+}
+
 // NewPlainRuntime - runtime + core control flow extensions
 func NewPlainRuntime() *Runtime {
 	return (&Runtime{
+		option: defaultRuntimeOption(),
 		Stack: []Frame{
 			make(Frame),
 		},
-		parseToken: func(expr string) (interface{}, error) {
-			return strconv.Atoi(expr)
-		},
 		extension: make(map[Name]func(r *Runtime, expr LambdaExpr) Object),
 	}).
+		WithOption(ParseNameOption(func(name Name) (interface{}, error) {
+			return strconv.Atoi(string(name))
+		})).
 		WithExtension("let", letExtension).
 		WithExtension("lambda", lambdaExtension).
 		WithExtension("case", caseExtension)
@@ -277,7 +302,7 @@ package fp
 type ArithmeticExtension = func(...Object) Object
 
 func (r *Runtime) stepWithTailCallOptimization(exprList ...Expr) []Object {
-	return r.stepWithTailOption(WithTailCallOptimization, exprList...)
+	return r.stepWithTailOption(TCOStepOption(true), exprList...)
 }
 
 func (r *Runtime) WithArithmeticExtension(name Name, f ArithmeticExtension) *Runtime {
@@ -322,7 +347,7 @@ func caseExtension(r *Runtime, expr LambdaExpr) Object {
 		panicError("runtime error: no case matched %s", expr)
 		return 0
 	}()
-	return r.Step(expr.Args[i+1], WithTailCallOptimization)
+	return r.Step(expr.Args[i+1], TCOStepOption(true))
 }
 
 func resetExtension(r *Runtime, expr LambdaExpr) Object {
@@ -382,7 +407,7 @@ func logInfo(format string, args ...interface{}) {
 }
 
 func logDebug(format string, args ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stdout, "DEBUG"+format, args...)
+	_, _ = fmt.Fprintf(os.Stdout, "DEBUG: "+format, args...)
 }
 ./pkg/fp/ast.go
 package fp
@@ -515,18 +540,23 @@ func (f Frame) Update(otherFrame Frame) Frame {
 
 type Extension = func(r *Runtime, expr LambdaExpr) Object
 type Runtime struct {
-	Stack      []Frame
-	parseToken func(Token) (interface{}, error)
-	extension  map[Name]Extension
+	option    *runtimeOption
+	Stack     []Frame
+	extension map[Name]Extension
 }
 
 func (r *Runtime) String() string {
 	s := ""
-	for _, f := range r.Stack {
+	for i, f := range r.Stack {
+		s += "["
 		for k, v := range f {
-			s += fmt.Sprintf("%s -> %v,", k, v)
+			s += fmt.Sprintf("%s -> %v, ", k, v)
 		}
-		s += "|"
+		if i != len(r.Stack)-1 {
+			s += "]\n"
+		} else {
+			s += "]"
+		}
 	}
 	return s
 }
@@ -536,9 +566,30 @@ func (r *Runtime) WithExtension(name Name, f Extension) *Runtime {
 	return r
 }
 
+func (r *Runtime) WithOption(opts ...RuntimeOption) *Runtime {
+	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+		r.option = opt(r.option)
+	}
+	return r
+}
+
+func defaultStepOption() *stepOption {
+	return &stepOption{
+		tailCallOptimization: false,
+	}
+}
+
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
 func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
+	if r.option.debug {
+		defer func() {
+			logDebug("%v\n", r)
+		}()
+	}
 	o := defaultStepOption()
 	for _, opt := range stepOptions {
 		if opt == nil {
@@ -549,8 +600,8 @@ func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
 	switch expr := expr.(type) {
 	case Name:
 		var v Object
-		// parse token
-		v, err := r.parseToken(string(expr))
+		// parse name
+		v, err := r.option.parseName(expr)
 		if err == nil {
 			return v
 		}

@@ -19,7 +19,7 @@ func main() {
 		panic("parse error")
 	}
 
-	r := fp.NewBasicRuntime().WithArithmeticExtension("div", func(nums ...fp.Object) fp.Object {
+	r := fp.NewBasicRuntime().WithOption(fp.DebugOption(true)).WithArithmeticExtension("div", func(nums ...fp.Object) fp.Object {
 		if len(nums) != 2 {
 			panic("runtime error")
 		}
@@ -48,6 +48,5 @@ func main() {
 	})
 	for _, expr := range exprList {
 		r.Step(expr)
-		fmt.Println(r)
 	}
 }

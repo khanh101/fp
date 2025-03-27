@@ -17,5 +17,5 @@ func logInfo(format string, args ...interface{}) {
 }
 
 func logDebug(format string, args ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stdout, "DEBUG"+format, args...)
+	_, _ = fmt.Fprintf(os.Stdout, "DEBUG: "+format, args...)
 }

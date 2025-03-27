@@ -3,7 +3,7 @@ package fp
 type ArithmeticExtension = func(...Object) Object
 
 func (r *Runtime) stepWithTailCallOptimization(exprList ...Expr) []Object {
-	return r.stepWithTailOption(WithTailCallOptimization, exprList...)
+	return r.stepWithTailOption(TCOStepOption(true), exprList...)
 }
 
 func (r *Runtime) WithArithmeticExtension(name Name, f ArithmeticExtension) *Runtime {
@@ -48,7 +48,7 @@ func caseExtension(r *Runtime, expr LambdaExpr) Object {
 		panicError("runtime error: no case matched %s", expr)
 		return 0
 	}()
-	return r.Step(expr.Args[i+1], WithTailCallOptimization)
+	return r.Step(expr.Args[i+1], TCOStepOption(true))
 }
 
 func resetExtension(r *Runtime, expr LambdaExpr) Object {

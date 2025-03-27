@@ -30,18 +30,23 @@ func (f Frame) Update(otherFrame Frame) Frame {
 
 type Extension = func(r *Runtime, expr LambdaExpr) Object
 type Runtime struct {
-	Stack      []Frame
-	parseToken func(Token) (interface{}, error)
-	extension  map[Name]Extension
+	option    *runtimeOption
+	Stack     []Frame
+	extension map[Name]Extension
 }
 
 func (r *Runtime) String() string {
 	s := ""
-	for _, f := range r.Stack {
+	for i, f := range r.Stack {
+		s += "["
 		for k, v := range f {
-			s += fmt.Sprintf("%s -> %v,", k, v)
+			s += fmt.Sprintf("%s -> %v, ", k, v)
 		}
-		s += "|"
+		if i != len(r.Stack)-1 {
+			s += "]\n"
+		} else {
+			s += "]"
+		}
 	}
 	return s
 }
@@ -51,9 +56,30 @@ func (r *Runtime) WithExtension(name Name, f Extension) *Runtime {
 	return r
 }
 
+func (r *Runtime) WithOption(opts ...RuntimeOption) *Runtime {
+	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+		r.option = opt(r.option)
+	}
+	return r
+}
+
+func defaultStepOption() *stepOption {
+	return &stepOption{
+		tailCallOptimization: false,
+	}
+}
+
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
 func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
+	if r.option.debug {
+		defer func() {
+			logDebug("%v\n", r)
+		}()
+	}
 	o := defaultStepOption()
 	for _, opt := range stepOptions {
 		if opt == nil {
@@ -64,8 +90,8 @@ func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
 	switch expr := expr.(type) {
 	case Name:
 		var v Object
-		// parse token
-		v, err := r.parseToken(string(expr))
+		// parse name
+		v, err := r.option.parseName(expr)
 		if err == nil {
 			return v
 		}

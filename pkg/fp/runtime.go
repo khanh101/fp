@@ -2,17 +2,27 @@ package fp
 
 import "strconv"
 
+func defaultRuntimeOption() *runtimeOption {
+	return &runtimeOption{
+		debug: false,
+		parseName: func(name Name) (interface{}, error) {
+			return strconv.Atoi(string(name))
+		},
+	}
+}
+
 // NewPlainRuntime - runtime + core control flow extensions
 func NewPlainRuntime() *Runtime {
 	return (&Runtime{
+		option: defaultRuntimeOption(),
 		Stack: []Frame{
 			make(Frame),
 		},
-		parseToken: func(expr string) (interface{}, error) {
-			return strconv.Atoi(expr)
-		},
 		extension: make(map[Name]func(r *Runtime, expr LambdaExpr) Object),
 	}).
+		WithOption(ParseNameOption(func(name Name) (interface{}, error) {
+			return strconv.Atoi(string(name))
+		})).
 		WithExtension("let", letExtension).
 		WithExtension("lambda", lambdaExtension).
 		WithExtension("case", caseExtension)

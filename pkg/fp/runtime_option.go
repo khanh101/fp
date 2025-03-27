@@ -5,13 +5,29 @@ type stepOption struct {
 	tailCallOptimization bool
 }
 
-func defaultStepOption() *stepOption {
-	return &stepOption{
-		tailCallOptimization: false,
+type RuntimeOption func(*runtimeOption) *runtimeOption
+type runtimeOption struct {
+	debug     bool
+	parseName func(Name) (interface{}, error)
+}
+
+func ParseNameOption(f func(Name) (interface{}, error)) RuntimeOption {
+	return func(o *runtimeOption) *runtimeOption {
+		o.parseName = f
+		return o
 	}
 }
 
-func WithTailCallOptimization(o *stepOption) *stepOption {
-	o.tailCallOptimization = true // TODO - debug tailcall
-	return o
+func DebugOption(debug bool) RuntimeOption {
+	return func(o *runtimeOption) *runtimeOption {
+		o.debug = debug
+		return o
+	}
+}
+
+func TCOStepOption(tco bool) StepOption {
+	return func(o *stepOption) *stepOption {
+		o.tailCallOptimization = false // TODO - debug tailcall
+		return o
+	}
 }

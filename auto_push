@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-
-go run cmd/man/main.go > MANUAL 2>&1
+rm -rf MANUAL.md
+touch MANUAL.md
+echo "\`\`\`" >> MANUAL.md
+go run cmd/man/main.go >> MANUAL.md 2>&1
+echo "\`\`\`" >> MANUAL.md
 ./export_to_chat > chat.txt
 
 

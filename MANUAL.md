@@ -1,3 +1,4 @@
+```
 welcome to fp repl! type <function or module name> for help
 >>>add
 extension: (add 1 (add 2 3) 3) - exec a sequence of expressions and return the sum
@@ -39,3 +40,4 @@ extension: (sub 2 (add 1 1)) - exec two expressions and return difference
 extension: (tail (print 1) (print 2) 3) - exec a sequence of expressions and return the last one
 >>>type
 extension: (type x 1 (lambda y (add 1 y))) - get types of objects (can get multiple ones)
+```

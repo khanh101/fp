@@ -7,56 +7,83 @@ import (
 	"os"
 )
 
-func tokenIter() <-chan fp.Token {
-	outCh := make(chan fp.Token)
-	fmt.Println("welcome to fp repl")
-	go func(outCh chan fp.Token) {
-		defer close(outCh)
-		scanner := bufio.NewScanner(os.Stdin)
-		fmt.Printf(">>>")
-		for scanner.Scan() {
-			line := scanner.Text()
+func write(format string, args ...interface{}) {
+	_, _ = fmt.Fprintf(os.Stderr, format, args...)
+	_ = os.Stderr.Sync() // flush
+}
 
-			for _, tok := range fp.Tokenize(line) {
-				outCh <- tok
-			}
-			fmt.Printf(">>>")
-		}
-		if err := scanner.Err(); err != nil {
-			panic(err)
-		}
-	}(outCh)
-	return outCh
+func writeln(format string, args ...interface{}) {
+	write(format+"\n", args...)
 }
 
 func main() {
 	r := fp.NewBasicRuntime().
-		WithArithmeticExtension("print", func(nums ...fp.Object) fp.Object {
+		WithArithmeticExtension("print", func(nums ...fp.Object) (fp.Object, error) {
 			for _, num := range nums {
 				fmt.Printf("%v ", num)
 			}
 			fmt.Println()
-			return len(nums)
+			return len(nums), nil
 		}).
-		WithArithmeticExtension("div", func(nums ...fp.Object) fp.Object {
-			if len(nums) != 2 {
-				panic("runtime error")
+		WithArithmeticExtension("div", func(value ...fp.Object) (fp.Object, error) {
+			if len(value) != 2 {
+				return nil, fmt.Errorf("subtract requires 2 arguments")
 			}
-			return nums[0].(int) / nums[1].(int)
+			a, ok := value[0].(int)
+			if !ok {
+				return nil, fmt.Errorf("subtract non-integer value")
+			}
+			b, ok := value[0].(int)
+			if !ok {
+				return nil, fmt.Errorf("subtract non-integer value")
+			}
+			if b == 0 {
+				return nil, fmt.Errorf("division by zero")
+			}
+			return a - b, nil
 		}).
-		WithArithmeticExtension("make_list", func(nums ...fp.Object) fp.Object {
+		WithArithmeticExtension("make_list", func(nums ...fp.Object) (fp.Object, error) {
 			var v []fp.Object
 			for _, num := range nums {
 				v = append(v, num)
 			}
-			return v
+			return v, nil
 		}).
-		WithArithmeticExtension("append_list", func(nums ...fp.Object) fp.Object {
-			return append(nums[0].([]fp.Object), nums[1:]...)
+		WithArithmeticExtension("append_list", func(nums ...fp.Object) (fp.Object, error) {
+			return append(nums[0].([]fp.Object), nums[1:]...), nil
 		})
-
-	for expr := range fp.ParseAllREPL(tokenIter()) {
-		r.Step(expr)
+	writeln("welcome to fp repl! ")
+	fmt.Printf("loaded modules: ")
+	for k, _ := range r.Module {
+		write("%v ", k)
 	}
-	return
+	writeln("")
+
+	parser := &fp.Parser{}
+
+	scanner := bufio.NewScanner(os.Stdin)
+	write(">>>")
+	for scanner.Scan() {
+		line := scanner.Text()
+		tokenList := fp.Tokenize(line)
+		executed := false
+		for _, token := range tokenList {
+			expr := parser.Input(token)
+			if expr != nil {
+				executed = true
+				output, err := r.Step(expr)
+				if err != nil {
+					writeln(err.Error())
+					continue
+				}
+				write("%v\n", output)
+			}
+		}
+		if executed {
+			write(">>>")
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		panic(err)
+	}
 }

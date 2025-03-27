@@ -27,12 +27,12 @@ func (f Frame) Update(otherFrame Frame) Frame {
 	return f
 }
 
-type Extension = func(r *Runtime, expr LambdaExpr) Object
+type Module = func(r *Runtime, expr LambdaExpr) (Object, error)
 type Runtime struct {
 	debug        bool
 	parseLiteral func(lit Name) (Object, error)
 	Stack        []Frame
-	extension    map[Name]Extension
+	Module       map[Name]Module
 }
 
 func (r *Runtime) String() string {
@@ -51,17 +51,17 @@ func (r *Runtime) String() string {
 	return s
 }
 
-func (r *Runtime) WithExtension(name Name, f Extension) *Runtime {
-	r.extension[name] = f
+func (r *Runtime) LoadModule(name Name, f Module) *Runtime {
+	r.Module[name] = f
 	return r
 }
 
-func (r *Runtime) WithParseLiteral(f func(lit Name) (Object, error)) *Runtime {
+func (r *Runtime) LoadParseLiteral(f func(lit Name) (Object, error)) *Runtime {
 	r.parseLiteral = f
 	return r
 }
 
-func (r *Runtime) WithDebug(debug bool) *Runtime {
+func (r *Runtime) SetDebug(debug bool) *Runtime {
 	r.debug = debug
 	return r
 }

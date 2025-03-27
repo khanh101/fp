@@ -1,23 +1,23 @@
 package fp
 
 import (
+	"errors"
 	"strings"
 )
 
 type Token = string
 
-func pop(tokenList []Token) ([]Token, Token) {
-	return tokenList[1:], tokenList[0]
-}
-
-func peak(tokenList []Token) Token {
-	return tokenList[0]
+func pop(tokenList []Token) ([]Token, Token, error) {
+	if len(tokenList) == 0 {
+		return nil, "", errors.New("empty token list")
+	}
+	return tokenList[1:], tokenList[0], nil
 }
 
 func Tokenize(str string) []Token {
 	// remove comment
 	parts := strings.Split(str, "\n")
-	newParts := []string{}
+	var newParts []string
 	for _, part := range parts {
 		newParts = append(newParts, strings.Split(part, "//")[0])
 	}
@@ -34,45 +34,62 @@ func Tokenize(str string) []Token {
 func ParseAll(tokenList []Token) ([]Expr, []Token) {
 	var expr Expr
 	var exprList []Expr
-	var endWithClose bool
+	var err error
 	for len(tokenList) > 0 {
-		expr, tokenList, endWithClose = parse(tokenList)
-		if endWithClose {
-			panicError("parse error")
+		expr, tokenList, err = parseSingle(tokenList)
+		if err != nil {
+			panic(err)
 		}
 		exprList = append(exprList, expr)
 	}
 	return exprList, tokenList
 }
 
-func ParseAllREPL(tokenCh <-chan Token) <-chan Expr {
-	outCh := make(chan Expr)
-	go func(outCh chan Expr) {
-		defer close(outCh)
-		for {
-			expr, endWithClose, eof := parseREPL(tokenCh)
-			if eof {
-				break
-			}
-			if endWithClose {
-				panicError("parse error")
-			}
-			outCh <- expr
-		}
-	}(outCh)
-	return outCh
+type Parser struct {
+	Buffer []Token
 }
 
-func parseREPL(tokenCh <-chan Token) (expr Expr, endWithClose bool, eof bool) {
-	for head := range tokenCh {
+func (p *Parser) Input(tok Token) Expr {
+	p.Buffer = append(p.Buffer, tok)
+	// try parse single // TODO : do this for simplicity
+	buffer := append([]Token(nil), p.Buffer...) // copy
+	expr, buffer, err := parseSingle(buffer)
+	if err != nil {
+		// parse fail - don't do anything
+		return nil
+	} else {
+		// parse ok - update buffer
+		p.Buffer = buffer
+		return expr
+	}
+}
+
+func parseSingle(tokenList []Token) (Expr, []Token, error) {
+	var parse func(tokenList []Token) (Expr, []Token, bool, error)
+	parse = func(tokenList []Token) (Expr, []Token, bool, error) {
+		if len(tokenList) == 0 {
+			return nil, nil, false, errors.New("empty token list")
+		}
+		tokenList, head, err := pop(tokenList) // pop ( or [ or name
+		if err != nil {
+			return nil, nil, false, err
+		}
 		switch head {
 		case "(":
-			funcName := <-tokenCh
+			tokenList, funcName, err := pop(tokenList)
+			if err != nil {
+				return nil, nil, false, err
+			}
+			if funcName == ")" { // empty
+				return parse(tokenList)
+			}
+			var expr Expr
 			var exprList []Expr
+			var endWithClose bool
 			for {
-				expr, endWithClose, eof = parseREPL(tokenCh)
-				if eof {
-					panicError("parse error")
+				expr, tokenList, endWithClose, err = parse(tokenList)
+				if err != nil {
+					return nil, nil, false, err
 				}
 				if endWithClose {
 					break
@@ -82,37 +99,18 @@ func parseREPL(tokenCh <-chan Token) (expr Expr, endWithClose bool, eof bool) {
 			return LambdaExpr{
 				Name: Name(funcName),
 				Args: exprList,
-			}, false, false
+			}, tokenList, false, nil
 		default:
-			return Name(head), head == ")", false
+			return Name(head), tokenList, head == ")", nil
 		}
 	}
-	return nil, false, true
-}
 
-func parse(tokenList []Token) (Expr, []Token, bool) {
-	if len(tokenList) == 0 {
-		return nil, nil, false
+	expr, tokenList, endWithClose, err := parse(tokenList)
+	if err != nil {
+		return nil, nil, err
 	}
-	tokenList, head := pop(tokenList) // pop ( or [ or name
-	switch head {
-	case "(":
-		tokenList, funcName := pop(tokenList)
-		var expr Expr
-		var exprList []Expr
-		var endWithClose bool
-		for {
-			expr, tokenList, endWithClose = parse(tokenList)
-			if endWithClose {
-				break
-			}
-			exprList = append(exprList, expr)
-		}
-		return LambdaExpr{
-			Name: Name(funcName),
-			Args: exprList,
-		}, tokenList, false
-	default:
-		return Name(head), tokenList, head == ")"
+	if endWithClose {
+		return nil, nil, errors.New("parse error")
 	}
+	return expr, tokenList, nil
 }

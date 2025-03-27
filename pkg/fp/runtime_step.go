@@ -19,7 +19,7 @@ func TCOStepOption(tco bool) StepOption {
 
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
-func (r *Runtime) Step(expr Expr, opts ...StepOption) Object {
+func (r *Runtime) Step(expr Expr, opts ...StepOption) (Object, error) {
 	if r.debug {
 		defer func() {
 			logDebug("%v\n", r)
@@ -40,7 +40,7 @@ func (r *Runtime) Step(expr Expr, opts ...StepOption) Object {
 		// parse name
 		v, err := r.parseLiteral(expr)
 		if err == nil {
-			return v
+			return v, nil
 		}
 		// find in stack for variable
 		for i := len(r.Stack) - 1; i >= 0; i-- {
@@ -48,10 +48,10 @@ func (r *Runtime) Step(expr Expr, opts ...StepOption) Object {
 				if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
 					_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
 				}
-				return v
+				return v, nil
 			}
 		}
-		panicError("runtime error: variable %s not found", expr.String())
+		return nil, fmt.Errorf("runtime error: variable %s not found", expr.String())
 	case LambdaExpr:
 		// find in stack for user-defined function
 		if f, ok := func() (Lambda, bool) {
@@ -67,7 +67,10 @@ func (r *Runtime) Step(expr Expr, opts ...StepOption) Object {
 			return Lambda{}, false
 		}(); ok {
 			// 1. evaluate arguments
-			args := r.stepWithTailOption(nil, expr.Args...)
+			args, err := r.stepWithTailOption(nil, expr.Args...)
+			if err != nil {
+				return nil, err
+			}
 			if o.tailCallOptimization {
 				// 2. reuse last frame
 				for i := 0; i < len(f.Params); i++ {
@@ -83,34 +86,44 @@ func (r *Runtime) Step(expr Expr, opts ...StepOption) Object {
 				r.Stack = append(r.Stack, localFrame)
 			}
 			// 4. exec function
-			v := r.Step(f.Impl)
+			v, err := r.Step(f.Impl)
+			if err != nil {
+				return nil, err
+			}
 			if o.tailCallOptimization {
 				// pass
 			} else {
 				// 5. pop Frame from Stack
 				r.Stack = r.Stack[:len(r.Stack)-1]
 			}
-			return v
+			return v, nil
 		}
-		// check for extension
-		if f, ok := r.extension[expr.Name]; ok {
+		// check for Module
+		if f, ok := r.Module[expr.Name]; ok {
 			return f(r, expr)
 		}
 		panicError("runtime error: function %s not found", expr.Name.String())
 	default:
 		panicError("runtime error: unknown expression type")
 	}
-	panicError("unreachable")
-	return nil
+	return nil, fmt.Errorf("unreachable")
 }
 
-func (r *Runtime) stepWithTailOption(opt StepOption, exprList ...Expr) []Object {
+func (r *Runtime) stepWithTailOption(opt StepOption, exprList ...Expr) ([]Object, error) {
 	var outputs []Object
 	if len(exprList) > 0 {
 		for i := 0; i < len(exprList)-1; i++ {
-			outputs = append(outputs, r.Step(exprList[i]))
+			output, err := r.Step(exprList[i])
+			if err != nil {
+				return nil, err
+			}
+			outputs = append(outputs, output)
 		}
-		outputs = append(outputs, r.Step(exprList[len(exprList)-1], opt))
+		output, err := r.Step(exprList[len(exprList)-1], opt)
+		if err != nil {
+			return nil, err
+		}
+		outputs = append(outputs, output)
 	}
-	return outputs
+	return outputs, nil
 }

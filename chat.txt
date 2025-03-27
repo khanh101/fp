@@ -179,58 +179,85 @@ import (
 	"os"
 )
 
-func tokenIter() <-chan fp.Token {
-	outCh := make(chan fp.Token)
-	fmt.Println("welcome to fp repl")
-	go func(outCh chan fp.Token) {
-		defer close(outCh)
-		scanner := bufio.NewScanner(os.Stdin)
-		fmt.Printf(">>>")
-		for scanner.Scan() {
-			line := scanner.Text()
+func write(format string, args ...interface{}) {
+	_, _ = fmt.Fprintf(os.Stderr, format, args...)
+	_ = os.Stderr.Sync() // flush
+}
 
-			for _, tok := range fp.Tokenize(line) {
-				outCh <- tok
-			}
-			fmt.Printf(">>>")
-		}
-		if err := scanner.Err(); err != nil {
-			panic(err)
-		}
-	}(outCh)
-	return outCh
+func writeln(format string, args ...interface{}) {
+	write(format+"\n", args...)
 }
 
 func main() {
 	r := fp.NewBasicRuntime().
-		WithArithmeticExtension("print", func(nums ...fp.Object) fp.Object {
+		WithArithmeticExtension("print", func(nums ...fp.Object) (fp.Object, error) {
 			for _, num := range nums {
 				fmt.Printf("%v ", num)
 			}
 			fmt.Println()
-			return len(nums)
+			return len(nums), nil
 		}).
-		WithArithmeticExtension("div", func(nums ...fp.Object) fp.Object {
-			if len(nums) != 2 {
-				panic("runtime error")
+		WithArithmeticExtension("div", func(value ...fp.Object) (fp.Object, error) {
+			if len(value) != 2 {
+				return nil, fmt.Errorf("subtract requires 2 arguments")
 			}
-			return nums[0].(int) / nums[1].(int)
+			a, ok := value[0].(int)
+			if !ok {
+				return nil, fmt.Errorf("subtract non-integer value")
+			}
+			b, ok := value[0].(int)
+			if !ok {
+				return nil, fmt.Errorf("subtract non-integer value")
+			}
+			if b == 0 {
+				return nil, fmt.Errorf("division by zero")
+			}
+			return a - b, nil
 		}).
-		WithArithmeticExtension("make_list", func(nums ...fp.Object) fp.Object {
+		WithArithmeticExtension("make_list", func(nums ...fp.Object) (fp.Object, error) {
 			var v []fp.Object
 			for _, num := range nums {
 				v = append(v, num)
 			}
-			return v
+			return v, nil
 		}).
-		WithArithmeticExtension("append_list", func(nums ...fp.Object) fp.Object {
-			return append(nums[0].([]fp.Object), nums[1:]...)
+		WithArithmeticExtension("append_list", func(nums ...fp.Object) (fp.Object, error) {
+			return append(nums[0].([]fp.Object), nums[1:]...), nil
 		})
-
-	for expr := range fp.ParseAllREPL(tokenIter()) {
-		r.Step(expr)
+	writeln("welcome to fp repl! ")
+	fmt.Printf("loaded modules: ")
+	for k, _ := range r.Module {
+		write("%v ", k)
 	}
-	return
+	writeln("")
+
+	parser := &fp.Parser{}
+
+	scanner := bufio.NewScanner(os.Stdin)
+	write(">>>")
+	for scanner.Scan() {
+		line := scanner.Text()
+		tokenList := fp.Tokenize(line)
+		executed := false
+		for _, token := range tokenList {
+			expr := parser.Input(token)
+			if expr != nil {
+				executed = true
+				output, err := r.Step(expr)
+				if err != nil {
+					writeln(err.Error())
+					continue
+				}
+				write("%v\n", output)
+			}
+		}
+		if executed {
+			write(">>>")
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		panic(err)
+	}
 }
 ./pkg/fp/runtime_step.go
 package fp
@@ -254,7 +281,7 @@ func TCOStepOption(tco bool) StepOption {
 
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
-func (r *Runtime) Step(expr Expr, opts ...StepOption) Object {
+func (r *Runtime) Step(expr Expr, opts ...StepOption) (Object, error) {
 	if r.debug {
 		defer func() {
 			logDebug("%v\n", r)
@@ -275,7 +302,7 @@ func (r *Runtime) Step(expr Expr, opts ...StepOption) Object {
 		// parse name
 		v, err := r.parseLiteral(expr)
 		if err == nil {
-			return v
+			return v, nil
 		}
 		// find in stack for variable
 		for i := len(r.Stack) - 1; i >= 0; i-- {
@@ -283,10 +310,10 @@ func (r *Runtime) Step(expr Expr, opts ...StepOption) Object {
 				if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
 					_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
 				}
-				return v
+				return v, nil
 			}
 		}
-		panicError("runtime error: variable %s not found", expr.String())
+		return nil, fmt.Errorf("runtime error: variable %s not found", expr.String())
 	case LambdaExpr:
 		// find in stack for user-defined function
 		if f, ok := func() (Lambda, bool) {
@@ -302,7 +329,10 @@ func (r *Runtime) Step(expr Expr, opts ...StepOption) Object {
 			return Lambda{}, false
 		}(); ok {
 			// 1. evaluate arguments
-			args := r.stepWithTailOption(nil, expr.Args...)
+			args, err := r.stepWithTailOption(nil, expr.Args...)
+			if err != nil {
+				return nil, err
+			}
 			if o.tailCallOptimization {
 				// 2. reuse last frame
 				for i := 0; i < len(f.Params); i++ {
@@ -318,43 +348,51 @@ func (r *Runtime) Step(expr Expr, opts ...StepOption) Object {
 				r.Stack = append(r.Stack, localFrame)
 			}
 			// 4. exec function
-			v := r.Step(f.Impl)
+			v, err := r.Step(f.Impl)
+			if err != nil {
+				return nil, err
+			}
 			if o.tailCallOptimization {
 				// pass
 			} else {
 				// 5. pop Frame from Stack
 				r.Stack = r.Stack[:len(r.Stack)-1]
 			}
-			return v
+			return v, nil
 		}
-		// check for extension
-		if f, ok := r.extension[expr.Name]; ok {
+		// check for Module
+		if f, ok := r.Module[expr.Name]; ok {
 			return f(r, expr)
 		}
 		panicError("runtime error: function %s not found", expr.Name.String())
 	default:
 		panicError("runtime error: unknown expression type")
 	}
-	panicError("unreachable")
-	return nil
+	return nil, fmt.Errorf("unreachable")
 }
 
-func (r *Runtime) stepWithTailOption(opt StepOption, exprList ...Expr) []Object {
+func (r *Runtime) stepWithTailOption(opt StepOption, exprList ...Expr) ([]Object, error) {
 	var outputs []Object
 	if len(exprList) > 0 {
 		for i := 0; i < len(exprList)-1; i++ {
-			outputs = append(outputs, r.Step(exprList[i]))
+			output, err := r.Step(exprList[i])
+			if err != nil {
+				return nil, err
+			}
+			outputs = append(outputs, output)
 		}
-		outputs = append(outputs, r.Step(exprList[len(exprList)-1], opt))
+		output, err := r.Step(exprList[len(exprList)-1], opt)
+		if err != nil {
+			return nil, err
+		}
+		outputs = append(outputs, output)
 	}
-	return outputs
+	return outputs, nil
 }
 ./pkg/fp/runtime.go
 package fp
 
 import (
-	"errors"
-	"math/big"
 	"strconv"
 )
 
@@ -368,73 +406,60 @@ func NewPlainRuntime() *Runtime {
 		Stack: []Frame{
 			make(Frame),
 		},
-		extension: make(map[Name]func(r *Runtime, expr LambdaExpr) Object),
+		Module: make(map[Name]Module),
 	}).
-		WithExtension("let", letExtension).
-		WithExtension("lambda", lambdaExtension).
-		WithExtension("case", caseExtension)
+		LoadModule("let", letExtension).
+		LoadModule("lambda", lambdaExtension).
+		LoadModule("case", caseExtension)
 }
 
 // NewBasicRuntime : NewPlainRuntime + minimal set of arithmetic extensions for Turing completeness
 func NewBasicRuntime() *Runtime {
 	return NewPlainRuntime().
-		WithExtension("reset", resetExtension).
+		LoadModule("reset", resetExtension).
 		WithArithmeticExtension("tail", tailArithmeticExtension).
 		WithArithmeticExtension("add", addArithmeticExtension).
 		WithArithmeticExtension("sub", subArithmeticExtension).
 		WithArithmeticExtension("sign", signArithmeticExtension)
 }
-
-// NewIntegerRuntime - BasicRuntime with bigInt
-func NewIntegerRuntime() *Runtime {
-	return NewPlainRuntime().
-		WithParseLiteral(func(lit Name) (Object, error) {
-			if i, ok := (&big.Int{}).SetString(lit.String(), 10); ok {
-				return i, nil
-			}
-			return nil, errors.New("integer parse error")
-		}).
-		WithExtension("reset", resetExtension).
-		WithArithmeticExtension("tail", tailArithmeticExtension).
-		WithArithmeticExtension("add", func(object ...Object) Object {
-			s := (&big.Int{}).SetInt64(0)
-			for _, v := range object {
-				s.Add(s, v.(*big.Int))
-			}
-			return s
-		}).
-		WithArithmeticExtension("sub", func(object ...Object) Object {
-			if len(object) != 2 {
-				panicError("sub arithmetic error")
-			}
-			s := (&big.Int{}).SetInt64(object[0].(int64))
-			s = s.Sub(s, object[1].(*big.Int))
-			return s
-		})
-}
 ./pkg/fp/runtime_extension.go
 package fp
 
-type ArithmeticExtension = func(...Object) Object
+import (
+	"errors"
+	"fmt"
+)
 
-func (r *Runtime) stepWithTailCallOptimization(exprList ...Expr) []Object {
+type ArithmeticExtension = func(...Object) (Object, error)
+
+func (r *Runtime) stepWithTailCallOptimization(exprList ...Expr) ([]Object, error) {
 	return r.stepWithTailOption(TCOStepOption(true), exprList...)
 }
 
 func (r *Runtime) WithArithmeticExtension(name Name, f ArithmeticExtension) *Runtime {
-	return r.WithExtension(name, func(r *Runtime, expr LambdaExpr) Object {
-		return f(r.stepWithTailCallOptimization(expr.Args...)...)
+	return r.LoadModule(name, func(r *Runtime, expr LambdaExpr) (Object, error) {
+		args, err := r.stepWithTailCallOptimization(expr.Args...)
+		if err != nil {
+			return nil, err
+		}
+		return f(args...)
 	})
 }
 
-func letExtension(r *Runtime, expr LambdaExpr) Object {
+func letExtension(r *Runtime, expr LambdaExpr) (Object, error) {
 	name := expr.Args[0].(Name)
-	outputs := r.stepWithTailCallOptimization(expr.Args[1:]...)
+	outputs, err := r.stepWithTailCallOptimization(expr.Args[1:]...)
+	if err != nil {
+		return nil, err
+	}
+	if len(outputs) == 0 {
+		return nil, errors.New("let of nothing")
+	}
 	r.Stack[len(r.Stack)-1][name] = outputs[len(outputs)-1]
-	return 0
+	return 0, nil
 }
 
-func lambdaExtension(r *Runtime, expr LambdaExpr) Object {
+func lambdaExtension(r *Runtime, expr LambdaExpr) (Object, error) {
 	v := Lambda{
 		Params: nil,
 		Impl:   nil,
@@ -446,61 +471,85 @@ func lambdaExtension(r *Runtime, expr LambdaExpr) Object {
 	}
 	v.Impl = expr.Args[len(expr.Args)-1]
 	v.Frame = make(Frame).Update(r.Stack[len(r.Stack)-1])
-	return v
+	return v, nil
 }
 
-func caseExtension(r *Runtime, expr LambdaExpr) Object {
-	cond := r.Step(expr.Args[0])
-	i := func() int {
+func caseExtension(r *Runtime, expr LambdaExpr) (Object, error) {
+	cond, err := r.Step(expr.Args[0])
+	if err != nil {
+		return nil, err
+	}
+	i, err := func() (int, error) {
 		for i := 1; i < len(expr.Args); i += 2 {
 			if arg, ok := expr.Args[i].(Name); ok && arg == "_" {
-				return i
+				return i, nil
 			}
-			if r.Step(expr.Args[i]) == cond {
-				return i
+			comp, err := r.Step(expr.Args[i])
+			if err != nil {
+				return 0, err
+			}
+			if comp == cond {
+				return i, nil
 			}
 		}
-		panicError("runtime error: no case matched %s", expr)
-		return 0
+		return 0, fmt.Errorf("runtime error: no case matched %s", expr)
 	}()
+	if err != nil {
+		return nil, err
+	}
 	return r.Step(expr.Args[i+1], TCOStepOption(true))
 }
 
-func resetExtension(r *Runtime, expr LambdaExpr) Object {
+func resetExtension(r *Runtime, expr LambdaExpr) (Object, error) {
 	r.Stack = []Frame{
 		make(Frame),
 	}
-	return nil
+	return nil, nil
 }
 
-func tailArithmeticExtension(value ...Object) Object {
-	return value[len(value)-1]
+func tailArithmeticExtension(value ...Object) (Object, error) {
+	return value[len(value)-1], nil
 }
 
-func addArithmeticExtension(value ...Object) Object {
-	v := 0
+func addArithmeticExtension(value ...Object) (Object, error) {
+	sum := 0
 	for i := 0; i < len(value); i++ {
-		v += value[i].(int)
+		v, ok := value[i].(int)
+		if !ok {
+			return nil, fmt.Errorf("adding non-integer value")
+		}
+		sum += v
 	}
-	return v
+	return sum, nil
 }
 
-func subArithmeticExtension(value ...Object) Object {
+func subArithmeticExtension(value ...Object) (Object, error) {
 	if len(value) != 2 {
-		panicError("runtime error: sub arithmetic extension requires 2 arguments %s")
+		return nil, fmt.Errorf("subtract requires 2 arguments")
 	}
-	return value[0].(int) - value[1].(int)
+	a, ok := value[0].(int)
+	if !ok {
+		return nil, fmt.Errorf("subtract non-integer value")
+	}
+	b, ok := value[0].(int)
+	if !ok {
+		return nil, fmt.Errorf("subtract non-integer value")
+	}
+	return a - b, nil
 }
 
-func signArithmeticExtension(value ...Object) Object {
-	v := value[len(value)-1].(int)
+func signArithmeticExtension(value ...Object) (Object, error) {
+	v, ok := value[len(value)-1].(int)
+	if !ok {
+		return nil, fmt.Errorf("sign non-integer value")
+	}
 	switch {
 	case v > 0:
-		return +1
+		return +1, nil
 	case v < 0:
-		return -1
+		return -1, nil
 	default:
-		return 0
+		return 0, nil
 	}
 }
 ./pkg/fp/util.go
@@ -560,23 +609,23 @@ func (e LambdaExpr) String() string {
 package fp
 
 import (
+	"errors"
 	"strings"
 )
 
 type Token = string
 
-func pop(tokenList []Token) ([]Token, Token) {
-	return tokenList[1:], tokenList[0]
-}
-
-func peak(tokenList []Token) Token {
-	return tokenList[0]
+func pop(tokenList []Token) ([]Token, Token, error) {
+	if len(tokenList) == 0 {
+		return nil, "", errors.New("empty token list")
+	}
+	return tokenList[1:], tokenList[0], nil
 }
 
 func Tokenize(str string) []Token {
 	// remove comment
 	parts := strings.Split(str, "\n")
-	newParts := []string{}
+	var newParts []string
 	for _, part := range parts {
 		newParts = append(newParts, strings.Split(part, "//")[0])
 	}
@@ -593,45 +642,62 @@ func Tokenize(str string) []Token {
 func ParseAll(tokenList []Token) ([]Expr, []Token) {
 	var expr Expr
 	var exprList []Expr
-	var endWithClose bool
+	var err error
 	for len(tokenList) > 0 {
-		expr, tokenList, endWithClose = parse(tokenList)
-		if endWithClose {
-			panicError("parse error")
+		expr, tokenList, err = parseSingle(tokenList)
+		if err != nil {
+			panic(err)
 		}
 		exprList = append(exprList, expr)
 	}
 	return exprList, tokenList
 }
 
-func ParseAllREPL(tokenCh <-chan Token) <-chan Expr {
-	outCh := make(chan Expr)
-	go func(outCh chan Expr) {
-		defer close(outCh)
-		for {
-			expr, endWithClose, eof := parseREPL(tokenCh)
-			if eof {
-				break
-			}
-			if endWithClose {
-				panicError("parse error")
-			}
-			outCh <- expr
-		}
-	}(outCh)
-	return outCh
+type Parser struct {
+	Buffer []Token
 }
 
-func parseREPL(tokenCh <-chan Token) (expr Expr, endWithClose bool, eof bool) {
-	for head := range tokenCh {
+func (p *Parser) Input(tok Token) Expr {
+	p.Buffer = append(p.Buffer, tok)
+	// try parse single // TODO : do this for simplicity
+	buffer := append([]Token(nil), p.Buffer...) // copy
+	expr, buffer, err := parseSingle(buffer)
+	if err != nil {
+		// parse fail - don't do anything
+		return nil
+	} else {
+		// parse ok - update buffer
+		p.Buffer = buffer
+		return expr
+	}
+}
+
+func parseSingle(tokenList []Token) (Expr, []Token, error) {
+	var parse func(tokenList []Token) (Expr, []Token, bool, error)
+	parse = func(tokenList []Token) (Expr, []Token, bool, error) {
+		if len(tokenList) == 0 {
+			return nil, nil, false, errors.New("empty token list")
+		}
+		tokenList, head, err := pop(tokenList) // pop ( or [ or name
+		if err != nil {
+			return nil, nil, false, err
+		}
 		switch head {
 		case "(":
-			funcName := <-tokenCh
+			tokenList, funcName, err := pop(tokenList)
+			if err != nil {
+				return nil, nil, false, err
+			}
+			if funcName == ")" { // empty
+				return parse(tokenList)
+			}
+			var expr Expr
 			var exprList []Expr
+			var endWithClose bool
 			for {
-				expr, endWithClose, eof = parseREPL(tokenCh)
-				if eof {
-					panicError("parse error")
+				expr, tokenList, endWithClose, err = parse(tokenList)
+				if err != nil {
+					return nil, nil, false, err
 				}
 				if endWithClose {
 					break
@@ -641,39 +707,20 @@ func parseREPL(tokenCh <-chan Token) (expr Expr, endWithClose bool, eof bool) {
 			return LambdaExpr{
 				Name: Name(funcName),
 				Args: exprList,
-			}, false, false
+			}, tokenList, false, nil
 		default:
-			return Name(head), head == ")", false
+			return Name(head), tokenList, head == ")", nil
 		}
 	}
-	return nil, false, true
-}
 
-func parse(tokenList []Token) (Expr, []Token, bool) {
-	if len(tokenList) == 0 {
-		return nil, nil, false
+	expr, tokenList, endWithClose, err := parse(tokenList)
+	if err != nil {
+		return nil, nil, err
 	}
-	tokenList, head := pop(tokenList) // pop ( or [ or name
-	switch head {
-	case "(":
-		tokenList, funcName := pop(tokenList)
-		var expr Expr
-		var exprList []Expr
-		var endWithClose bool
-		for {
-			expr, tokenList, endWithClose = parse(tokenList)
-			if endWithClose {
-				break
-			}
-			exprList = append(exprList, expr)
-		}
-		return LambdaExpr{
-			Name: Name(funcName),
-			Args: exprList,
-		}, tokenList, false
-	default:
-		return Name(head), tokenList, head == ")"
+	if endWithClose {
+		return nil, nil, errors.New("parse error")
 	}
+	return expr, tokenList, nil
 }
 ./pkg/fp/runtime_core.go
 package fp
@@ -705,12 +752,12 @@ func (f Frame) Update(otherFrame Frame) Frame {
 	return f
 }
 
-type Extension = func(r *Runtime, expr LambdaExpr) Object
+type Module = func(r *Runtime, expr LambdaExpr) (Object, error)
 type Runtime struct {
 	debug        bool
 	parseLiteral func(lit Name) (Object, error)
 	Stack        []Frame
-	extension    map[Name]Extension
+	Module       map[Name]Module
 }
 
 func (r *Runtime) String() string {
@@ -729,17 +776,17 @@ func (r *Runtime) String() string {
 	return s
 }
 
-func (r *Runtime) WithExtension(name Name, f Extension) *Runtime {
-	r.extension[name] = f
+func (r *Runtime) LoadModule(name Name, f Module) *Runtime {
+	r.Module[name] = f
 	return r
 }
 
-func (r *Runtime) WithParseLiteral(f func(lit Name) (Object, error)) *Runtime {
+func (r *Runtime) LoadParseLiteral(f func(lit Name) (Object, error)) *Runtime {
 	r.parseLiteral = f
 	return r
 }
 
-func (r *Runtime) WithDebug(debug bool) *Runtime {
+func (r *Runtime) SetDebug(debug bool) *Runtime {
 	r.debug = debug
 	return r
 }

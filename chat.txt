@@ -191,13 +191,6 @@ func writeln(format string, args ...interface{}) {
 
 func main() {
 	r := fp.NewDebugRuntime().
-		WithArithmeticExtension("print", func(nums ...fp.Object) (fp.Object, error) {
-			for _, num := range nums {
-				fmt.Printf("%v ", num)
-			}
-			fmt.Println()
-			return len(nums), nil
-		}).
 		WithArithmeticExtension("div", func(value ...fp.Object) (fp.Object, error) {
 			if len(value) != 2 {
 				return nil, fmt.Errorf("subtract requires 2 arguments")
@@ -213,7 +206,7 @@ func main() {
 			if b == 0 {
 				return nil, fmt.Errorf("division by zero")
 			}
-			return a - b, nil
+			return a / b, nil
 		})
 	writeln("welcome to fp repl! ")
 	write("loaded modules: ")
@@ -307,18 +300,26 @@ func (r *Runtime) Step(expr Expr, opts ...StepOption) (Object, error) {
 		return nil, fmt.Errorf("runtime error: variable %s not found", expr.String())
 	case LambdaExpr:
 		// find in stack for user-defined function
-		if f, ok := func() (Lambda, bool) {
+		f, ok, err := func() (Lambda, bool, error) {
 			// 1. get func recursively
 			for i := len(r.Stack) - 1; i >= 0; i-- {
 				if f, ok := r.Stack[i][expr.Name]; ok {
 					if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
 						_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
 					}
-					return f.(Lambda), true
+					f, ok := f.(Lambda)
+					if !ok {
+						return Lambda{}, false, fmt.Errorf("first argument in S-expression is not a Lambda")
+					}
+					return f, true, nil
 				}
 			}
-			return Lambda{}, false
-		}(); ok {
+			return Lambda{}, false, nil
+		}()
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			// 1. evaluate arguments
 			args, err := r.stepWithTailOption(nil, expr.Args...)
 			if err != nil {
@@ -416,6 +417,7 @@ func NewBasicRuntime() *Runtime {
 
 func NewStdRuntime() *Runtime {
 	return NewBasicRuntime().
+		WithArithmeticExtension("print", printArithmeticExtension).
 		WithArithmeticExtension("list", listArithmeticExtension).
 		WithArithmeticExtension("append", appendArithmeticExtension).
 		WithArithmeticExtension("slice", sliceArithmeticExtension).
@@ -697,7 +699,7 @@ func subArithmeticExtension(value ...Object) (Object, error) {
 	if !ok {
 		return nil, fmt.Errorf("subtract non-integer value")
 	}
-	b, ok := value[0].(int)
+	b, ok := value[1].(int)
 	if !ok {
 		return nil, fmt.Errorf("subtract non-integer value")
 	}
@@ -789,6 +791,14 @@ func moduleModule(r *Runtime, expr LambdaExpr) (Object, error) {
 		return nil, err
 	}
 	return r.Module, nil
+}
+
+func printArithmeticExtension(value ...Object) (Object, error) {
+	for _, v := range value {
+		fmt.Printf("%v ", v)
+	}
+	fmt.Println()
+	return len(value), nil
 }
 ./pkg/fp/runtime_core.go
 package fp

@@ -118,7 +118,7 @@ func subArithmeticExtension(value ...Object) (Object, error) {
 	if !ok {
 		return nil, fmt.Errorf("subtract non-integer value")
 	}
-	b, ok := value[0].(int)
+	b, ok := value[1].(int)
 	if !ok {
 		return nil, fmt.Errorf("subtract non-integer value")
 	}
@@ -210,4 +210,12 @@ func moduleModule(r *Runtime, expr LambdaExpr) (Object, error) {
 		return nil, err
 	}
 	return r.Module, nil
+}
+
+func printArithmeticExtension(value ...Object) (Object, error) {
+	for _, v := range value {
+		fmt.Printf("%v ", v)
+	}
+	fmt.Println()
+	return len(value), nil
 }

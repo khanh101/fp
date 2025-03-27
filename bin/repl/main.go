@@ -19,13 +19,6 @@ func writeln(format string, args ...interface{}) {
 
 func main() {
 	r := fp.NewDebugRuntime().
-		WithArithmeticExtension("print", func(nums ...fp.Object) (fp.Object, error) {
-			for _, num := range nums {
-				fmt.Printf("%v ", num)
-			}
-			fmt.Println()
-			return len(nums), nil
-		}).
 		WithArithmeticExtension("div", func(value ...fp.Object) (fp.Object, error) {
 			if len(value) != 2 {
 				return nil, fmt.Errorf("subtract requires 2 arguments")
@@ -41,7 +34,7 @@ func main() {
 			if b == 0 {
 				return nil, fmt.Errorf("division by zero")
 			}
-			return a - b, nil
+			return a / b, nil
 		})
 	writeln("welcome to fp repl! ")
 	write("loaded modules: ")

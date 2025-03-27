@@ -49,18 +49,26 @@ func (r *Runtime) Step(expr Expr, opts ...StepOption) (Object, error) {
 		return nil, fmt.Errorf("runtime error: variable %s not found", expr.String())
 	case LambdaExpr:
 		// find in stack for user-defined function
-		if f, ok := func() (Lambda, bool) {
+		f, ok, err := func() (Lambda, bool, error) {
 			// 1. get func recursively
 			for i := len(r.Stack) - 1; i >= 0; i-- {
 				if f, ok := r.Stack[i][expr.Name]; ok {
 					if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
 						_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
 					}
-					return f.(Lambda), true
+					f, ok := f.(Lambda)
+					if !ok {
+						return Lambda{}, false, fmt.Errorf("first argument in S-expression is not a Lambda")
+					}
+					return f, true, nil
 				}
 			}
-			return Lambda{}, false
-		}(); ok {
+			return Lambda{}, false, nil
+		}()
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			// 1. evaluate arguments
 			args, err := r.stepWithTailOption(nil, expr.Args...)
 			if err != nil {

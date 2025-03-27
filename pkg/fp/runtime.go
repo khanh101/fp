@@ -33,6 +33,7 @@ func NewBasicRuntime() *Runtime {
 
 func NewStdRuntime() *Runtime {
 	return NewBasicRuntime().
+		WithArithmeticExtension("print", printArithmeticExtension).
 		WithArithmeticExtension("list", listArithmeticExtension).
 		WithArithmeticExtension("append", appendArithmeticExtension).
 		WithArithmeticExtension("slice", sliceArithmeticExtension).

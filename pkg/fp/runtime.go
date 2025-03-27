@@ -57,16 +57,6 @@ func NewPlainRuntime() *Runtime {
 			panic("runtime error")
 		}()
 		return r.Step(expr.Args[i+1], WithTailCallOptimization)
-	}).WithExtension("tail", func(r *Runtime, expr LambdaExpr) Value {
-		var v Value
-		for i := 0; i < len(expr.Args); i++ {
-			if i == len(expr.Args)-1 {
-				v = r.Step(expr.Args[i], WithTailCallOptimization)
-			} else {
-				v = r.Step(expr.Args[i])
-			}
-		}
-		return v
 	})
 }
 
@@ -83,6 +73,8 @@ func NewBasicRuntime() *Runtime {
 			return 0
 		}
 		panic("runtime error")
+	}).WithArithmeticExtension("tail", func(value ...Value) Value {
+		return value[len(value)-1]
 	}).WithArithmeticExtension("sub", func(value ...Value) Value {
 		if len(value) != 2 {
 			panic("runtime error")

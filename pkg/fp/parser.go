@@ -38,30 +38,35 @@ func ParseAll(tokenList []Token) ([]Expr, []Token) {
 		if len(tokenList) == 0 || peak(tokenList) == ")" {
 			break
 		}
-		expr, tokenList = parse(tokenList)
+		expr, tokenList, _ = parse(tokenList)
 		exprList = append(exprList, expr)
 	}
 	return exprList, tokenList
 }
 
-func parse(tokenList []Token) (Expr, []Token) {
+func parse(tokenList []Token) (Expr, []Token, bool) {
 	if len(tokenList) == 0 {
-		return nil, nil
+		return nil, nil, false
 	}
 	tokenList, head := pop(tokenList) // pop ( or [ or name
 	switch head {
 	case "(":
 		tokenList, funcName := pop(tokenList)
-		exprList, tokenList := ParseAll(tokenList)
-		tokenList, tail := pop(tokenList) // pop )
-		if tail != ")" {
-			panicError("parse error")
+		var expr Expr
+		var exprList []Expr
+		var endWithClose bool
+		for {
+			expr, tokenList, endWithClose = parse(tokenList)
+			if endWithClose {
+				break
+			}
+			exprList = append(exprList, expr)
 		}
 		return LambdaExpr{
 			Name: Name(funcName),
 			Args: exprList,
-		}, tokenList
+		}, tokenList, false
 	default:
-		return Name(head), tokenList
+		return Name(head), tokenList, head == ")"
 	}
 }

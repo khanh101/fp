@@ -1,6 +1,10 @@
 package fp
 
-import "strconv"
+import (
+	"errors"
+	"math/big"
+	"strconv"
+)
 
 // NewPlainRuntime - runtime + core control flow extensions
 func NewPlainRuntime() *Runtime {
@@ -29,6 +33,30 @@ func NewBasicRuntime() *Runtime {
 		WithArithmeticExtension("sign", signArithmeticExtension)
 }
 
+// NewIntegerRuntime - BasicRuntime with bigInt
 func NewIntegerRuntime() *Runtime {
-	return nil
+	return NewPlainRuntime().
+		WithParseLiteral(func(lit Name) (Object, error) {
+			if i, ok := (&big.Int{}).SetString(lit.String(), 10); ok {
+				return i, nil
+			}
+			return nil, errors.New("integer parse error")
+		}).
+		WithExtension("reset", resetExtension).
+		WithArithmeticExtension("tail", tailArithmeticExtension).
+		WithArithmeticExtension("add", func(object ...Object) Object {
+			s := (&big.Int{}).SetInt64(0)
+			for _, v := range object {
+				s.Add(s, v.(*big.Int))
+			}
+			return s
+		}).
+		WithArithmeticExtension("sub", func(object ...Object) Object {
+			if len(object) != 2 {
+				panicError("sub arithmetic error")
+			}
+			s := (&big.Int{}).SetInt64(object[0].(int64))
+			s = s.Sub(s, object[1].(*big.Int))
+			return s
+		})
 }

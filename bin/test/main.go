@@ -20,7 +20,7 @@ func main() {
 	}
 
 	r := fp.NewBasicRuntime().
-		WithDebug(true).
+		WithDebug(false).
 		WithArithmeticExtension("div", func(nums ...fp.Object) fp.Object {
 			if len(nums) != 2 {
 				panic("runtime error")

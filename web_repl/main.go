@@ -1,17 +1,14 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"fp/pkg/fp"
-	"os"
-	"os/signal"
 	"sort"
 	"strings"
-	"syscall"
+	"syscall/js"
 )
 
-func repl(web bool) (output string, reply func(input string) (output string), clear func() (output string)) {
+func repl(web bool) (output string, repl func(input string) (output string), clear func() (output string)) {
 	r := fp.NewStdRuntime()
 	buffer := ""
 	write := func(format string, a ...interface{}) {
@@ -73,33 +70,39 @@ func repl(web bool) (output string, reply func(input string) (output string), cl
 		}
 }
 
+var reply func(input string) (output string)
+var clear func() (output string)
+
+func evaluate(this js.Value, p []js.Value) interface{} {
+	if len(p) == 0 {
+		return js.ValueOf("no input")
+	}
+	input := p[0].String()
+
+	// repl here
+	// end repl here
+
+	// Simple echo for now; replace with real evaluation logic
+	output := fmt.Sprintf("You entered: %s", input)
+	js.Global().Call("updateOutput", output)
+	return nil
+}
+
+func write(format string, a ...interface{}) {
+	s := fmt.Sprintf(format, a...)
+	strings.ReplaceAll(s, "\n", "<br>")
+
+}
+
 func main() {
-	output, reply, clearBuffer := repl(false)
-	_, _ = fmt.Fprintf(os.Stderr, output)
+	// Expose Go functions to the global JavaScript context
+	js.Global().Set("evaluate", js.FuncOf(evaluate))
+	// js.Global().Set("sendOutputToWeb", js.FuncOf(sendOutputToWeb))
 
-	signCh := make(chan os.Signal, 1)
-	signal.Notify(signCh, syscall.SIGINT, syscall.SIGTERM)
+	//js.Global().Call("sendOutputToWeb")
 
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		select {
-		case s := <-signCh:
-			switch s {
-			case syscall.SIGINT:
-				output := clearBuffer()
-				_, _ = fmt.Fprintf(os.Stderr, output)
-			case syscall.SIGTERM:
-				os.Exit(0)
-			default:
-				os.Exit(1)
-			}
-		default:
-			input := scanner.Text()
-			output := reply(input)
-			_, _ = fmt.Fprintf(os.Stderr, output)
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		panic(err)
-	}
+	js.Global().Call("updateOutput", "this is weird")
+
+	// Keep WebAssembly running
+	select {}
 }

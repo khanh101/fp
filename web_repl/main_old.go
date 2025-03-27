@@ -18,7 +18,7 @@ func evaluate(this js.Value, p []js.Value) interface{} {
 }
 
 func sendOutputToWeb(this js.Value, p []js.Value) interface{} {
-	// Conditionally send data to the web, for example, without user input
+	// Conditionally send data to the web_repl, for example, without user input
 	output := "This is data sent from Go without user input."
 	js.Global().Call("updateOutput", output)
 	return nil

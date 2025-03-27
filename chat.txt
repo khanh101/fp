@@ -164,7 +164,7 @@ import (
 	"syscall"
 )
 
-func repl(web bool) (output string, repl func(input string) (output string), clear func() (output string)) {
+func repl(web bool) (output string, reply func(input string) (output string), clear func() (output string)) {
 	r := fp.NewStdRuntime()
 	buffer := ""
 	write := func(format string, a ...interface{}) {
@@ -227,8 +227,8 @@ func repl(web bool) (output string, repl func(input string) (output string), cle
 }
 
 func main() {
-	output, repl, clearBuffer := repl(false)
-	fmt.Printf(output)
+	output, reply, clearBuffer := repl(false)
+	_, _ = fmt.Fprintf(os.Stderr, output)
 
 	signCh := make(chan os.Signal, 1)
 	signal.Notify(signCh, syscall.SIGINT, syscall.SIGTERM)
@@ -240,21 +240,23 @@ func main() {
 			switch s {
 			case syscall.SIGINT:
 				output := clearBuffer()
-				fmt.Printf(output)
+				_, _ = fmt.Fprintf(os.Stderr, output)
 			case syscall.SIGTERM:
 				os.Exit(0)
+			default:
+				os.Exit(1)
 			}
 		default:
 			input := scanner.Text()
-			output := repl(input)
-			fmt.Printf(output)
+			output := reply(input)
+			_, _ = fmt.Fprintf(os.Stderr, output)
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		panic(err)
 	}
 }
-./web/main_old.go
+./web_repl/main_old.go
 package main
 
 import (
@@ -275,7 +277,7 @@ func evaluate(this js.Value, p []js.Value) interface{} {
 }
 
 func sendOutputToWeb(this js.Value, p []js.Value) interface{} {
-	// Conditionally send data to the web, for example, without user input
+	// Conditionally send data to the web_repl, for example, without user input
 	output := "This is data sent from Go without user input."
 	js.Global().Call("updateOutput", output)
 	return nil
@@ -298,7 +300,7 @@ func main() {
 	// Keep WebAssembly running
 	select {}
 }
-./web/main.go
+./web_repl/main.go
 package main
 
 import (
@@ -306,14 +308,17 @@ import (
 	"fp/pkg/fp"
 	"sort"
 	"strings"
+	"syscall/js"
 )
 
-func repl() func(input string) (output string) {
+func repl(web bool) (output string, repl func(input string) (output string), clear func() (output string)) {
 	r := fp.NewStdRuntime()
 	buffer := ""
 	write := func(format string, a ...interface{}) {
 		s := fmt.Sprintf(format, a...)
-		strings.ReplaceAll(s, "\n", "<br>")
+		if web {
+			strings.ReplaceAll(s, "\n", "<br>")
+		}
 		buffer += s
 	}
 	writeln := func(s string) {
@@ -333,32 +338,76 @@ func repl() func(input string) (output string) {
 	writeln("")
 	write(">>>")
 	parser := &fp.Parser{}
-	return func(input string) (output string) {
-		tokenList := fp.Tokenize(input)
-		executed := false
-		if len(tokenList) == 0 {
-			executed = true
-		} else {
-			for _, token := range tokenList {
-				expr := parser.Input(token)
-				if expr != nil {
-					executed = true
-					output, err := r.Step(expr)
-					if err != nil {
-						writeln(err.Error())
-						continue
+
+	output, buffer = buffer, ""
+	return output, func(input string) (output string) {
+			tokenList := fp.Tokenize(input)
+			executed := false
+			if len(tokenList) == 0 {
+				executed = true
+			} else {
+				for _, token := range tokenList {
+					expr := parser.Input(token)
+					if expr != nil {
+						executed = true
+						output, err := r.Step(expr)
+						if err != nil {
+							writeln(err.Error())
+							continue
+						}
+						write("%v\n", output)
 					}
-					write("%v\n", output)
 				}
 			}
+			if executed {
+				write(">>>")
+			}
+			output, buffer = buffer, ""
+			return output
+		}, func() (output string) {
+			parser.Clear()
+			writeln(">>> (Control + C) to clear buffer, (Control + D) to exit")
+			writeln(">>>")
+			output, buffer = buffer, ""
+			return output
 		}
-		if executed {
-			write(">>>")
-		}
-		output = buffer
-		buffer = ""
-		return output
+}
+
+var reply func(input string) (output string)
+var clear func() (output string)
+
+func evaluate(this js.Value, p []js.Value) interface{} {
+	if len(p) == 0 {
+		return js.ValueOf("no input")
 	}
+	input := p[0].String()
+
+	// repl here
+	// end repl here
+
+	// Simple echo for now; replace with real evaluation logic
+	output := fmt.Sprintf("You entered: %s", input)
+	js.Global().Call("updateOutput", output)
+	return nil
+}
+
+func write(format string, a ...interface{}) {
+	s := fmt.Sprintf(format, a...)
+	strings.ReplaceAll(s, "\n", "<br>")
+
+}
+
+func main() {
+	// Expose Go functions to the global JavaScript context
+	js.Global().Set("evaluate", js.FuncOf(evaluate))
+	// js.Global().Set("sendOutputToWeb", js.FuncOf(sendOutputToWeb))
+
+	//js.Global().Call("sendOutputToWeb")
+
+	js.Global().Call("updateOutput", "this is weird")
+
+	// Keep WebAssembly running
+	select {}
 }
 ./pkg/fp/runtime_step.go
 package fp

@@ -43,9 +43,7 @@ func (r *Runtime) WithExtension(name Name, f Extension) *Runtime {
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
 func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
-	o := &stepOption{
-		tailCallOptimization: false,
-	}
+	o := defaultStepOption()
 	for _, opt := range stepOptions {
 		o = opt(o)
 	}
@@ -57,6 +55,7 @@ func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
 		if err == nil {
 			return v
 		}
+		// find in stack
 		for i := len(r.Stack) - 1; i >= 0; i-- {
 			if v, ok := r.Stack[i][expr]; ok {
 				if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
@@ -65,7 +64,7 @@ func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
 				return v
 			}
 		}
-		panic("runtime error")
+		panicError("runtime error: variable %s not found", expr.String())
 	case LambdaExpr:
 		// check for user-defined function
 		if f, ok := func() (Lambda, bool) {
@@ -113,9 +112,10 @@ func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
 		if f, ok := r.extension[expr.Name]; ok {
 			return f(r, expr)
 		}
-		panic("runtime error")
-
+		panicError("runtime error: function %s not found", expr.Name.String())
 	default:
-		panic("runtime error")
+		panicError("runtime error: unknown expression type")
 	}
+	panicError("unreachable")
+	return nil
 }

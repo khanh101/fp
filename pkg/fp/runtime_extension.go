@@ -52,7 +52,8 @@ func caseExtension(r *Runtime, expr LambdaExpr) Object {
 				return i
 			}
 		}
-		panic("runtime error")
+		panicError("runtime error: no case matched %s", expr)
+		return 0
 	}()
 	return r.Step(expr.Args[i+1], WithTailCallOptimization)
 }
@@ -71,7 +72,7 @@ func addArithmeticExtension(value ...Object) Object {
 
 func subArithmeticExtension(value ...Object) Object {
 	if len(value) != 2 {
-		panic("runtime error")
+		panicError("runtime error: sub arithmetic extension requires 2 arguments %s")
 	}
 	return value[0].(int) - value[1].(int)
 }

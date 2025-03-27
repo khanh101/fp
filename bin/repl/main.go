@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"fp/pkg/fp"
 	"os"
+	"sort"
 )
 
 func write(format string, args ...interface{}) {
@@ -44,8 +45,13 @@ func main() {
 		})
 	writeln("welcome to fp repl! ")
 	write("loaded modules: ")
-	for k, _ := range r.Module {
-		write("%v ", k)
+	var moduleNameList []string
+	for k := range r.Module {
+		moduleNameList = append(moduleNameList, string(k))
+	}
+	sort.Strings(moduleNameList)
+	for _, name := range moduleNameList {
+		write("%s ", name)
 	}
 	writeln("")
 

@@ -21,7 +21,7 @@ func writeln(format string, args ...interface{}) {
 
 func main() {
 	r := fp.NewDebugRuntime().
-		WithArithmeticExtension("div", func(value ...fp.Object) (fp.Object, error) {
+		LoadExtension("div", func(value ...fp.Object) (fp.Object, error) {
 			if len(value) != 2 {
 				return nil, fmt.Errorf("subtract requires 2 arguments")
 			}

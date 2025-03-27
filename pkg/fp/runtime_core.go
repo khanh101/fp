@@ -4,20 +4,11 @@ import (
 	"fmt"
 )
 
-const DETECT_NONPURE = true
-
-// Object : object union of int, string, Lambda - TODO : introduce new data types
-type Object interface{}
-type Lambda struct {
-	Params []Name `json:"params,omitempty"`
-	Impl   Expr   `json:"impl,omitempty"`
-	Frame  Frame  `json:"frame,omitempty"`
+type Runtime struct {
+	parseLiteral func(lit Name) (Object, error)
+	Stack        []Frame         `json:"stack,omitempty"`
+	Module       map[Name]Module `json:"module,omitempty"`
 }
-
-func (l Lambda) String() string {
-	return l.Impl.String()
-}
-
 type Frame map[Name]Object
 
 func (f Frame) Update(otherFrame Frame) Frame {
@@ -28,11 +19,6 @@ func (f Frame) Update(otherFrame Frame) Frame {
 }
 
 type Module = func(r *Runtime, expr LambdaExpr) (Object, error)
-type Runtime struct {
-	parseLiteral func(lit Name) (Object, error)
-	Stack        []Frame         `json:"stack,omitempty"`
-	Module       map[Name]Module `json:"module,omitempty"`
-}
 
 func (r *Runtime) String() string {
 	s := ""

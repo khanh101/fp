@@ -25,19 +25,19 @@ func NewPlainRuntime() *Runtime {
 func NewBasicRuntime() *Runtime {
 	return NewPlainRuntime().
 		LoadModule("reset", resetModule).
-		WithArithmeticExtension("tail", tailArithmeticExtension).
-		WithArithmeticExtension("add", addArithmeticExtension).
-		WithArithmeticExtension("sub", subArithmeticExtension).
-		WithArithmeticExtension("sign", signArithmeticExtension)
+		LoadExtension("tail", tailExtension).
+		LoadExtension("add", addExtension).
+		LoadExtension("sub", subExtension).
+		LoadExtension("sign", signExtension)
 }
 
 func NewStdRuntime() *Runtime {
 	return NewBasicRuntime().
-		WithArithmeticExtension("print", printArithmeticExtension).
-		WithArithmeticExtension("list", listArithmeticExtension).
-		WithArithmeticExtension("append", appendArithmeticExtension).
-		WithArithmeticExtension("slice", sliceArithmeticExtension).
-		WithArithmeticExtension("peak", peakArithmeticExtension)
+		LoadExtension("print", printExtension).
+		LoadExtension("list", listExtension).
+		LoadExtension("append", appendExtension).
+		LoadExtension("slice", sliceExtension).
+		LoadExtension("peak", peakExtension)
 }
 
 // NewDebugRuntime : NewBasicRuntime + debug extensions

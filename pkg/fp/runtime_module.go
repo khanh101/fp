@@ -4,9 +4,9 @@ import (
 	"fmt"
 )
 
-type ArithmeticExtension = func(...Object) (Object, error)
+type Extension = func(...Object) (Object, error)
 
-func (r *Runtime) WithArithmeticExtension(name Name, f ArithmeticExtension) *Runtime {
+func (r *Runtime) LoadExtension(name Name, f Extension) *Runtime {
 	return r.LoadModule(name, func(r *Runtime, expr LambdaExpr) (Object, error) {
 		args, err := r.stepMany(expr.Args...)
 		if err != nil {
@@ -90,11 +90,11 @@ func resetModule(r *Runtime, expr LambdaExpr) (Object, error) {
 	return nil, nil
 }
 
-func tailArithmeticExtension(value ...Object) (Object, error) {
+func tailExtension(value ...Object) (Object, error) {
 	return value[len(value)-1], nil
 }
 
-func addArithmeticExtension(value ...Object) (Object, error) {
+func addExtension(value ...Object) (Object, error) {
 	sum := 0
 	for i := 0; i < len(value); i++ {
 		v, ok := value[i].(int)
@@ -106,7 +106,7 @@ func addArithmeticExtension(value ...Object) (Object, error) {
 	return sum, nil
 }
 
-func subArithmeticExtension(value ...Object) (Object, error) {
+func subExtension(value ...Object) (Object, error) {
 	if len(value) != 2 {
 		return nil, fmt.Errorf("subtract requires 2 arguments")
 	}
@@ -121,7 +121,7 @@ func subArithmeticExtension(value ...Object) (Object, error) {
 	return a - b, nil
 }
 
-func signArithmeticExtension(value ...Object) (Object, error) {
+func signExtension(value ...Object) (Object, error) {
 	v, ok := value[len(value)-1].(int)
 	if !ok {
 		return nil, fmt.Errorf("sign non-integer value")
@@ -136,7 +136,7 @@ func signArithmeticExtension(value ...Object) (Object, error) {
 	}
 }
 
-func listArithmeticExtension(value ...Object) (Object, error) {
+func listExtension(value ...Object) (Object, error) {
 	var l []Object
 	for _, v := range value {
 		l = append(l, v)
@@ -144,7 +144,7 @@ func listArithmeticExtension(value ...Object) (Object, error) {
 	return l, nil
 }
 
-func appendArithmeticExtension(value ...Object) (Object, error) {
+func appendExtension(value ...Object) (Object, error) {
 	l, ok := value[0].([]Object)
 	if !ok {
 		return nil, fmt.Errorf("first argument must be list")
@@ -152,7 +152,7 @@ func appendArithmeticExtension(value ...Object) (Object, error) {
 	return append(l, value[1:]...), nil
 }
 
-func sliceArithmeticExtension(value ...Object) (Object, error) {
+func sliceExtension(value ...Object) (Object, error) {
 	if len(value) != 3 {
 		return nil, fmt.Errorf("slice requires 3 arguments")
 	}
@@ -174,7 +174,7 @@ func sliceArithmeticExtension(value ...Object) (Object, error) {
 	return l[i:j], nil
 }
 
-func peakArithmeticExtension(value ...Object) (Object, error) {
+func peakExtension(value ...Object) (Object, error) {
 	if len(value) != 2 {
 		return nil, fmt.Errorf("peak requires 2 arguments")
 	}
@@ -210,7 +210,7 @@ func moduleModule(r *Runtime, expr LambdaExpr) (Object, error) {
 	return r.Module, nil
 }
 
-func printArithmeticExtension(value ...Object) (Object, error) {
+func printExtension(value ...Object) (Object, error) {
 	for _, v := range value {
 		fmt.Printf("%v ", v)
 	}

@@ -5,6 +5,8 @@ import (
 	"os"
 )
 
+const DETECT_NONPURE = true
+
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
 func (r *Runtime) Step(expr Expr) (Object, error) {

@@ -70,6 +70,7 @@ func (r *runtime) Step(expr Expr) Value {
 		}
 		panic("runtime error")
 	case LambdaExpr:
+		// TODO - change all of these into WithSystemExtension
 		switch expr.Name {
 		case "let":
 			name := expr.Args[0].(Name)
@@ -125,6 +126,7 @@ func (r *runtime) Step(expr Expr) Value {
 			return v
 		case "tail":
 			var v Value
+			// TODO - add tail call optimization
 			for _, arg := range expr.Args {
 				v = r.Step(arg)
 			}

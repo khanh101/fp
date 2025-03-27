@@ -9,15 +9,18 @@ import (
 
 func tokenIter() <-chan fp.Token {
 	outCh := make(chan fp.Token)
+	fmt.Println("welcome to fp repl")
 	go func(outCh chan fp.Token) {
 		defer close(outCh)
 		scanner := bufio.NewScanner(os.Stdin)
+		fmt.Printf(">>>")
 		for scanner.Scan() {
 			line := scanner.Text()
 
 			for _, tok := range fp.Tokenize(line) {
 				outCh <- tok
 			}
+			fmt.Printf(">>>")
 		}
 		if err := scanner.Err(); err != nil {
 			panic(err)

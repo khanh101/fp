@@ -10,15 +10,22 @@ const DETECT_NONPURE = true
 
 func NewRuntime() *Runtime {
 	return (&Runtime{
-		stack: []Frame{
+		Stack: []Frame{
 			make(Frame),
 		},
 		systemExtension: make(map[Name]func(r *Runtime, expr LambdaExpr) Value),
 		userExtension:   make(map[Name]func(...Value) Value),
 	}).WithSystemExtension("let", func(r *Runtime, expr LambdaExpr) Value {
 		name := expr.Args[0].(Name)
-		v := r.Step(expr.Args[1])
-		r.stack[len(r.stack)-1][name] = v
+		var v Value
+		for i := 1; i < len(expr.Args); i++ {
+			if i == len(expr.Args)-1 {
+				v = r.Step(expr.Args[i], WithTailCall)
+			} else {
+				v = r.Step(expr.Args[i])
+			}
+		}
+		r.Stack[len(r.Stack)-1][name] = v
 		return v
 	}).WithSystemExtension("lambda", func(r *Runtime, expr LambdaExpr) Value {
 		v := Lambda{
@@ -31,7 +38,7 @@ func NewRuntime() *Runtime {
 			v.Params = append(v.Params, paramName)
 		}
 		v.Impl = expr.Args[len(expr.Args)-1]
-		v.Frame = make(Frame).Update(r.stack[len(r.stack)-1])
+		v.Frame = make(Frame).Update(r.Stack[len(r.Stack)-1])
 		return v
 	}).WithSystemExtension("case", func(r *Runtime, expr LambdaExpr) Value {
 		cond := r.Step(expr.Args[0])
@@ -46,9 +53,9 @@ func NewRuntime() *Runtime {
 			}
 			panic("runtime error")
 		}()
-		return r.Step(expr.Args[i+1])
+		return r.Step(expr.Args[i+1], WithTailCall)
 	}).WithSystemExtension("sign", func(r *Runtime, expr LambdaExpr) Value {
-		v := r.Step(expr.Args[0]).(int)
+		v := r.Step(expr.Args[0], WithTailCall).(int)
 		switch {
 		case v > 0:
 			return +1
@@ -60,19 +67,26 @@ func NewRuntime() *Runtime {
 		panic("runtime error")
 	}).WithSystemExtension("sub", func(r *Runtime, expr LambdaExpr) Value {
 		a := r.Step(expr.Args[0]).(int)
-		b := r.Step(expr.Args[1]).(int)
+		b := r.Step(expr.Args[1], WithTailCall).(int)
 		return a - b
 	}).WithSystemExtension("add", func(r *Runtime, expr LambdaExpr) Value {
-		v := 0
-		for _, arg := range expr.Args {
-			v += r.Step(arg).(int)
+		var v int
+		for i := 0; i < len(expr.Args); i++ {
+			if i == len(expr.Args)-1 {
+				v += r.Step(expr.Args[i], WithTailCall).(int)
+			} else {
+				v += r.Step(expr.Args[i]).(int)
+			}
 		}
 		return v
 	}).WithSystemExtension("tail", func(r *Runtime, expr LambdaExpr) Value {
 		var v Value
-		// TODO - add tail call optimization
-		for _, arg := range expr.Args {
-			v = r.Step(arg)
+		for i := 0; i < len(expr.Args); i++ {
+			if i == len(expr.Args)-1 {
+				v = r.Step(expr.Args[i], WithTailCall)
+			} else {
+				v = r.Step(expr.Args[i])
+			}
 		}
 		return v
 	})
@@ -89,7 +103,7 @@ func (r *Runtime) WithSystemExtension(name Name, f func(r *Runtime, expr LambdaE
 }
 
 type Runtime struct {
-	stack           []Frame
+	Stack           []Frame
 	systemExtension map[Name]func(r *Runtime, expr LambdaExpr) Value
 	userExtension   map[Name]func(...Value) Value
 }
@@ -115,8 +129,8 @@ type callOption struct {
 	tailCall bool
 }
 
-func withTailCall(o *callOption) *callOption {
-	o.tailCall = true
+func WithTailCall(o *callOption) *callOption {
+	o.tailCall = false // TODO - debug tailcall
 	return o
 }
 
@@ -137,9 +151,9 @@ func (r *Runtime) Step(expr Expr, callOptions ...func(*callOption) *callOption) 
 		if err == nil {
 			return v
 		}
-		for i := len(r.stack) - 1; i >= 0; i-- {
-			if v, ok := r.stack[i][expr]; ok {
-				if DETECT_NONPURE && i != 0 && i < len(r.stack)-1 {
+		for i := len(r.Stack) - 1; i >= 0; i-- {
+			if v, ok := r.Stack[i][expr]; ok {
+				if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
 					_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
 				}
 				return v
@@ -162,9 +176,9 @@ func (r *Runtime) Step(expr Expr, callOptions ...func(*callOption) *callOption) 
 		// user-defined function application
 		// 1. get func recursively
 		f := func() Lambda {
-			for i := len(r.stack) - 1; i >= 0; i-- {
-				if f, ok := r.stack[i][expr.Name]; ok {
-					if DETECT_NONPURE && i != 0 && i < len(r.stack)-1 {
+			for i := len(r.Stack) - 1; i >= 0; i-- {
+				if f, ok := r.Stack[i][expr.Name]; ok {
+					if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
 						_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
 					}
 					return f.(Lambda)
@@ -180,7 +194,7 @@ func (r *Runtime) Step(expr Expr, callOptions ...func(*callOption) *callOption) 
 		if o.tailCall {
 			// tail call - use last frame
 			for i := 0; i < len(f.Params); i++ {
-				r.stack[len(r.stack)-1][f.Params[i]] = args[i]
+				r.Stack[len(r.Stack)-1][f.Params[i]] = args[i]
 			}
 		} else {
 			// 2. add argument to local Frame
@@ -188,16 +202,16 @@ func (r *Runtime) Step(expr Expr, callOptions ...func(*callOption) *callOption) 
 			for i := 0; i < len(f.Params); i++ {
 				localFrame[f.Params[i]] = args[i]
 			}
-			// 3. push Frame to stack
-			r.stack = append(r.stack, localFrame)
+			// 3. push Frame to Stack
+			r.Stack = append(r.Stack, localFrame)
 		}
 		// 4. exec function
 		v := r.Step(f.Impl)
 		if o.tailCall {
 			// pass
 		} else {
-			// 5. pop Frame from stack
-			r.stack = r.stack[:len(r.stack)-1]
+			// 5. pop Frame from Stack
+			r.Stack = r.Stack[:len(r.Stack)-1]
 		}
 		return v
 	default:

@@ -75,7 +75,6 @@
 (print l)
 
 
-(reset)
 // define fibonacci
 
 (let fibonacci

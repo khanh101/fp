@@ -137,7 +137,7 @@ func signExtension(value ...Object) (Object, error) {
 }
 
 func listExtension(value ...Object) (Object, error) {
-	var l []Object
+	var l List
 	for _, v := range value {
 		l = append(l, v)
 	}
@@ -145,7 +145,7 @@ func listExtension(value ...Object) (Object, error) {
 }
 
 func appendExtension(value ...Object) (Object, error) {
-	l, ok := value[0].([]Object)
+	l, ok := value[0].(List)
 	if !ok {
 		return nil, fmt.Errorf("first argument must be list")
 	}
@@ -156,7 +156,7 @@ func sliceExtension(value ...Object) (Object, error) {
 	if len(value) != 3 {
 		return nil, fmt.Errorf("slice requires 3 arguments")
 	}
-	l, ok := value[0].([]Object)
+	l, ok := value[0].(List)
 	if !ok {
 		return nil, fmt.Errorf("first argument must be list")
 	}
@@ -178,7 +178,7 @@ func peakExtension(value ...Object) (Object, error) {
 	if len(value) != 2 {
 		return nil, fmt.Errorf("peak requires 2 arguments")
 	}
-	l, ok := value[0].([]Object)
+	l, ok := value[0].(List)
 	if !ok {
 		return nil, fmt.Errorf("first argument must be list")
 	}
@@ -193,6 +193,30 @@ func peakExtension(value ...Object) (Object, error) {
 }
 
 // TODO - implement map filter reduce
+/*
+func mapModule(r *Runtime, expr LambdaExpr) (Object, error) {
+	if len(expr.Args) != 2 {
+		return nil, fmt.Errorf("map requires 2 arguments")
+	}
+	l, ok := expr.Args[0].(List)
+	if !ok {
+		return nil, fmt.Errorf("first argument must be list")
+	}
+	funcName, ok := expr.Args[1].(Name)
+	if !ok {
+		return nil, fmt.Errorf("second argument must be name")
+	}
+	var outputs List
+	for _, v := range l {
+		o, err := r.Step(LambdaExpr{
+			Name: funcName,
+			Args: []Expr{
+				v
+			},
+		})
+	}
+}
+*/
 
 func stackModule(r *Runtime, expr LambdaExpr) (Object, error) {
 	_, err := r.stepMany(expr.Args...)
@@ -200,14 +224,6 @@ func stackModule(r *Runtime, expr LambdaExpr) (Object, error) {
 		return nil, err
 	}
 	return r.Stack, nil
-}
-
-func moduleModule(r *Runtime, expr LambdaExpr) (Object, error) {
-	_, err := r.stepMany(expr.Args...)
-	if err != nil {
-		return nil, err
-	}
-	return r.Module, nil
 }
 
 func printExtension(value ...Object) (Object, error) {

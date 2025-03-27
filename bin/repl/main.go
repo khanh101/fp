@@ -39,13 +39,13 @@ func main() {
 			return a / b, nil
 		})
 	writeln("welcome to fp repl! ")
-	write("loaded modules: ")
-	var moduleNameList []string
-	for k := range r.Module {
-		moduleNameList = append(moduleNameList, string(k))
+	write("loaded functions and modules: ")
+	var funcNameList []string
+	for k := range r.Stack[0] {
+		funcNameList = append(funcNameList, string(k))
 	}
-	sort.Strings(moduleNameList)
-	for _, name := range moduleNameList {
+	sort.Strings(funcNameList)
+	for _, name := range funcNameList {
 		write("%s ", name)
 	}
 	writeln("")

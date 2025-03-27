@@ -13,7 +13,6 @@ func NewPlainRuntime() *Runtime {
 		Stack: []Frame{
 			make(Frame),
 		},
-		Module: make(map[Name]Module),
 	}).
 		LoadModule("let", letModule).
 		LoadModule("del", delModule).
@@ -43,6 +42,5 @@ func NewStdRuntime() *Runtime {
 // NewDebugRuntime : NewBasicRuntime + debug extensions
 func NewDebugRuntime() *Runtime {
 	return NewStdRuntime().
-		LoadModule("stack", stackModule).
-		LoadModule("module", moduleModule)
+		LoadModule("stack", stackModule)
 }

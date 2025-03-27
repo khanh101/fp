@@ -6,8 +6,7 @@ import (
 
 type Runtime struct {
 	parseLiteral func(lit Name) (Object, error)
-	Stack        []Frame         `json:"stack,omitempty"`
-	Module       map[Name]Module `json:"module,omitempty"`
+	Stack        []Frame `json:"stack,omitempty"`
 }
 type Frame map[Name]Object
 
@@ -17,8 +16,6 @@ func (f Frame) Update(otherFrame Frame) Frame {
 	}
 	return f
 }
-
-type Module = func(r *Runtime, expr LambdaExpr) (Object, error)
 
 func (r *Runtime) String() string {
 	s := ""
@@ -37,7 +34,7 @@ func (r *Runtime) String() string {
 }
 
 func (r *Runtime) LoadModule(name Name, f Module) *Runtime {
-	r.Module[name] = f
+	r.Stack[0][name] = f
 	return r
 }
 

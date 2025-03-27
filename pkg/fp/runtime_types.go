@@ -1,8 +1,10 @@
 package fp
 
+import "fmt"
+
 // types - TODO implement custom data types like Int, List, Dict
 
-// Object : object union of int, string, Lambda - TODO : introduce new data types
+// Object : object union of int, Lambda, Module, List - TODO : introduce new data types
 type Object interface{}
 type Lambda struct {
 	Params []Name `json:"params,omitempty"`
@@ -14,4 +16,20 @@ func (l Lambda) String() string {
 	return l.Impl.String()
 }
 
-type List = []Object
+type Module func(r *Runtime, expr LambdaExpr) (Object, error)
+
+func (m Module) String() string {
+	return fmt.Sprintf("[module %p]", m)
+}
+
+type List []Object
+
+func (l List) String() string {
+	s := ""
+	s += "["
+	for _, obj := range l {
+		s += fmt.Sprintf("%v,", obj)
+	}
+	s += "]"
+	return s
+}

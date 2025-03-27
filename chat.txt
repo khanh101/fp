@@ -46,6 +46,8 @@ no 😅
 
 ## language specs
 
+_out-dated, refer to `pkg/fp/runtime.go` for latest_
+
 - program : a list of expression
 - name and expression: name is a string of characters, e.g. `x`, `mul`, and expression is enclosed with parentheses starting with a name, e.g `(let x 3)`, `(add 1 2)`
 - evaluation: in run time, name and expression have an associated value

@@ -24,20 +24,7 @@
     )
 )
 
-// define fibonacci
 
-(let fibonacci
-    (lambda x
-        (case (sign (sub x 1))
-            1 (tail
-                (let y (fibonacci (sub x 1)))
-                (let z (fibonacci (sub x 2)))
-                (add y z)
-            )
-            _ x
-        )
-    )
-)
 
 
 // partial function using lambda
@@ -94,6 +81,23 @@
 (let l (make_list 1 2 3 5 -7))                        // test list
 (let l (append_list l 6))
 (print l)
+
+
+(reset)
+// define fibonacci
+
+(let fibonacci
+    (lambda x
+        (case (sign (sub x 1))
+            1 (tail
+                (let y (fibonacci (sub x 1)))
+                (let z (fibonacci (sub x 2)))
+                (add y z)
+            )
+            _ x
+        )
+    )
+)
 
 (let x (input))                                           // waiting for user input
 (print (fibonacci x) 11)                                // print the x-th fibonacci

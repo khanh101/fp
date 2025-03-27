@@ -21,6 +21,7 @@ func NewPlainRuntime() *Runtime {
 // NewBasicRuntime : NewPlainRuntime + minimal set of arithmetic extensions for Turing completeness
 func NewBasicRuntime() *Runtime {
 	return NewPlainRuntime().
+		WithExtension("reset", resetExtension).
 		WithArithmeticExtension("tail", tailArithmeticExtension).
 		WithArithmeticExtension("add", addArithmeticExtension).
 		WithArithmeticExtension("sub", subArithmeticExtension).

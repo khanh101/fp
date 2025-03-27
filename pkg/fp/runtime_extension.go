@@ -51,6 +51,13 @@ func caseExtension(r *Runtime, expr LambdaExpr) Object {
 	return r.Step(expr.Args[i+1], WithTailCallOptimization)
 }
 
+func resetExtension(r *Runtime, expr LambdaExpr) Object {
+	r.Stack = []Frame{
+		make(Frame),
+	}
+	return nil
+}
+
 func tailArithmeticExtension(value ...Object) Object {
 	return value[len(value)-1]
 }

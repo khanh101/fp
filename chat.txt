@@ -265,6 +265,7 @@ func NewPlainRuntime() *Runtime {
 // NewBasicRuntime : NewPlainRuntime + minimal set of arithmetic extensions for Turing completeness
 func NewBasicRuntime() *Runtime {
 	return NewPlainRuntime().
+		WithExtension("reset", resetExtension).
 		WithArithmeticExtension("tail", tailArithmeticExtension).
 		WithArithmeticExtension("add", addArithmeticExtension).
 		WithArithmeticExtension("sub", subArithmeticExtension).
@@ -322,6 +323,13 @@ func caseExtension(r *Runtime, expr LambdaExpr) Object {
 		return 0
 	}()
 	return r.Step(expr.Args[i+1], WithTailCallOptimization)
+}
+
+func resetExtension(r *Runtime, expr LambdaExpr) Object {
+	r.Stack = []Frame{
+		make(Frame),
+	}
+	return nil
 }
 
 func tailArithmeticExtension(value ...Object) Object {
@@ -645,20 +653,7 @@ func (r *Runtime) stepWithTailOption(opt StepOption, exprList ...Expr) []Object 
     )
 )
 
-// define fibonacci
 
-(let fibonacci
-    (lambda x
-        (case (sign (sub x 1))
-            1 (tail
-                (let y (fibonacci (sub x 1)))
-                (let z (fibonacci (sub x 2)))
-                (add y z)
-            )
-            _ x
-        )
-    )
-)
 
 
 // partial function using lambda
@@ -715,6 +710,23 @@ func (r *Runtime) stepWithTailOption(opt StepOption, exprList ...Expr) []Object 
 (let l (make_list 1 2 3 5 -7))                        // test list
 (let l (append_list l 6))
 (print l)
+
+
+(reset)
+// define fibonacci
+
+(let fibonacci
+    (lambda x
+        (case (sign (sub x 1))
+            1 (tail
+                (let y (fibonacci (sub x 1)))
+                (let z (fibonacci (sub x 2)))
+                (add y z)
+            )
+            _ x
+        )
+    )
+)
 
 (let x (input))                                           // waiting for user input
 (print (fibonacci x) 11)                                // print the x-th fibonacci

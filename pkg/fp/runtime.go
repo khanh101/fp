@@ -180,7 +180,7 @@ func (r *Runtime) Step(expr Expr, callOptions ...func(*callOption) *callOption) 
 		if o.tailCall {
 			// tail call - use last frame
 			for i := 0; i < len(f.Params); i++ {
-				r.stack[len(r.stack)-1][f12.Params[i]] = args[i]
+				r.stack[len(r.stack)-1][f.Params[i]] = args[i]
 			}
 		} else {
 			// 2. add argument to local Frame

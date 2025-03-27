@@ -12,10 +12,11 @@ func (r *Runtime) WithExtension(name Name, f func(r *Runtime, expr LambdaExpr) V
 	return r
 }
 
+type Extension = func(r *Runtime, expr LambdaExpr) Value
 type Runtime struct {
 	Stack      []Frame
 	parseToken func(Token) (interface{}, error)
-	extension  map[Name]func(r *Runtime, expr LambdaExpr) Value
+	extension  map[Name]Extension
 }
 
 // Value : union of int, string, Lambda - TODO : introduce new data types
@@ -41,7 +42,7 @@ func (f Frame) Update(otherFrame Frame) Frame {
 
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
-func (r *Runtime) Step(expr Expr, stepOptions ...func(*stepOption) *stepOption) Value {
+func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Value {
 	o := &stepOption{
 		tailCallOptimization: false,
 	}

@@ -1,5 +1,6 @@
 package fp
 
+type StepOption func(*stepOption) *stepOption
 type stepOption struct {
 	tailCallOptimization bool
 }

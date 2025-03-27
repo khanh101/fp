@@ -43,5 +43,6 @@ func NewStdRuntime() *Runtime {
 		LoadExtension("peak", peakExtension).
 		LoadModule("map", mapModule).
 		LoadExtension("type", typeExtension).
-		LoadModule("stack", stackModule)
+		LoadModule("stack", stackModule).
+		LoadExtension("unicode", unicodeExtension)
 }

@@ -40,4 +40,6 @@ extension: (sub 2 (add 1 1)) - exec two expressions and return difference
 extension: (tail (print 1) (print 2) 3) - exec a sequence of expressions and return the last one
 >>>type
 extension: (type x 1 (lambda y (add 1 y))) - get types of objects (can get multiple ones)
+>>>unicode
+extension: (unicode (list 1 2 3) 3) - print integers in unicode - this is just for hello world
 ```

@@ -381,3 +381,29 @@ var printExtension = Extension{
 	},
 	Man: "extension: (print 1 x (lambda 3)) - print values",
 }
+
+var unicodeExtension = Extension{
+	Exec: func(values ...Object) (Object, error) {
+		var printList func(values ...Object) (Object, error)
+		printList = func(values ...Object) (Object, error) {
+			for _, v := range values {
+				switch v := v.(type) {
+				case int:
+					fmt.Printf("%c, ", rune(v))
+				case List:
+					fmt.Printf("[")
+					_, err := printList(v)
+					if err != nil {
+						return nil, err
+					}
+					fmt.Printf("]")
+				default:
+					return nil, fmt.Errorf("argument must be int or list")
+				}
+			}
+			return nil, nil
+		}
+		return printList(values...)
+	},
+	Man: "extension: (unicode (list 1 2 3) 3) - print integers in unicode - this is just for hello world",
+}

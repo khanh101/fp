@@ -95,6 +95,8 @@ extension: (sub 2 (add 1 1)) - exec two expressions and return difference
 extension: (tail (print 1) (print 2) 3) - exec a sequence of expressions and return the last one
 >>>type
 extension: (type x 1 (lambda y (add 1 y))) - get types of objects (can get multiple ones)
+>>>unicode
+extension: (unicode (list 1 2 3) 3) - print integers in unicode - this is just for hello world
 ```
 ./cmd/man/main.go
 package main
@@ -381,7 +383,8 @@ func NewStdRuntime() *Runtime {
 		LoadExtension("peak", peakExtension).
 		LoadModule("map", mapModule).
 		LoadExtension("type", typeExtension).
-		LoadModule("stack", stackModule)
+		LoadModule("stack", stackModule).
+		LoadExtension("unicode", unicodeExtension)
 }
 ./pkg/fp/ast.go
 package fp
@@ -918,6 +921,32 @@ var printExtension = Extension{
 		return len(values), nil
 	},
 	Man: "extension: (print 1 x (lambda 3)) - print values",
+}
+
+var unicodeExtension = Extension{
+	Exec: func(values ...Object) (Object, error) {
+		var printList func(values ...Object) (Object, error)
+		printList = func(values ...Object) (Object, error) {
+			for _, v := range values {
+				switch v := v.(type) {
+				case int:
+					fmt.Printf("%c, ", rune(v))
+				case List:
+					fmt.Printf("[")
+					_, err := printList(v)
+					if err != nil {
+						return nil, err
+					}
+					fmt.Printf("]")
+				default:
+					return nil, fmt.Errorf("argument must be int or list")
+				}
+			}
+			return nil, nil
+		}
+		return printList(values...)
+	},
+	Man: "extension: (unicode (list 1 2 3) 3) - print integers in unicode - this is just for hello world",
 }
 ./pkg/fp/runtime_core.go
 package fp

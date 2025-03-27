@@ -389,7 +389,7 @@ var unicodeExtension = Extension{
 			for _, v := range values {
 				switch v := v.(type) {
 				case int:
-					fmt.Printf("%c, ", rune(v))
+					fmt.Printf("%c", rune(v))
 				case List:
 					fmt.Printf("[")
 					_, err := printList(v)

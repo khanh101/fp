@@ -10,7 +10,7 @@ type Object interface{}
 func getType(o Object) String {
 	switch o.(type) {
 	case int:
-		return "int"
+		return "Int"
 	case String:
 		return "String"
 	case Lambda:

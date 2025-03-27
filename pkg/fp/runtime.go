@@ -28,3 +28,7 @@ func NewBasicRuntime() *Runtime {
 		WithArithmeticExtension("sub", subArithmeticExtension).
 		WithArithmeticExtension("sign", signArithmeticExtension)
 }
+
+func NewIntegerRuntime() *Runtime {
+	return nil
+}

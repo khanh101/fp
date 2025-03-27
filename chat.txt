@@ -376,6 +376,10 @@ func NewBasicRuntime() *Runtime {
 		WithArithmeticExtension("sub", subArithmeticExtension).
 		WithArithmeticExtension("sign", signArithmeticExtension)
 }
+
+func NewIntegerRuntime() *Runtime {
+	return nil
+}
 ./pkg/fp/runtime_extension.go
 package fp
 

@@ -4,6 +4,11 @@ below is the readme and implementation of a simple functional programming langua
 
 A simple functional programming language in 130 lines of code with `functions as first-class citizens`. $\mathbb{F}_p$ also denotes the finite field of order $p$ 
 
+## How to use?
+
+A REPL is available by running `go run bin/repl/main.go`. An example program is at `example.lisp`.
+
+Have fun!
 
 ## How to implement data structures like list, dict
 

@@ -278,8 +278,18 @@ func NewBasicRuntime() *Runtime {
 			panic("runtime error")
 		}()
 		return r.Step(expr.Args[i+1], WithTailCallOptimization)
-	}).WithExtension("sign", func(r *Runtime, expr LambdaExpr) Value {
-		v := r.Step(expr.Args[0], WithTailCallOptimization).(int)
+	}).WithExtension("tail", func(r *Runtime, expr LambdaExpr) Value {
+		var v Value
+		for i := 0; i < len(expr.Args); i++ {
+			if i == len(expr.Args)-1 {
+				v = r.Step(expr.Args[i], WithTailCallOptimization)
+			} else {
+				v = r.Step(expr.Args[i])
+			}
+		}
+		return v
+	}).WithArithmeticExtension("sign", func(value ...Value) Value {
+		v := value[len(value)-1].(int)
 		switch {
 		case v > 0:
 			return +1
@@ -289,28 +299,15 @@ func NewBasicRuntime() *Runtime {
 			return 0
 		}
 		panic("runtime error")
-	}).WithExtension("sub", func(r *Runtime, expr LambdaExpr) Value {
-		a := r.Step(expr.Args[0]).(int)
-		b := r.Step(expr.Args[1], WithTailCallOptimization).(int)
-		return a - b
-	}).WithExtension("add", func(r *Runtime, expr LambdaExpr) Value {
-		var v int
-		for i := 0; i < len(expr.Args); i++ {
-			if i == len(expr.Args)-1 {
-				v += r.Step(expr.Args[i], WithTailCallOptimization).(int)
-			} else {
-				v += r.Step(expr.Args[i]).(int)
-			}
+	}).WithArithmeticExtension("sub", func(value ...Value) Value {
+		if len(value) != 2 {
+			panic("runtime error")
 		}
-		return v
-	}).WithExtension("tail", func(r *Runtime, expr LambdaExpr) Value {
-		var v Value
-		for i := 0; i < len(expr.Args); i++ {
-			if i == len(expr.Args)-1 {
-				v = r.Step(expr.Args[i], WithTailCallOptimization)
-			} else {
-				v = r.Step(expr.Args[i])
-			}
+		return value[0].(int) - value[1].(int)
+	}).WithArithmeticExtension("add", func(value ...Value) Value {
+		v := 0
+		for i := 0; i < len(value); i++ {
+			v += value[i].(int)
 		}
 		return v
 	})

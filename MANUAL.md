@@ -41,5 +41,5 @@ extension: (tail (print 1) (print 2) 3) - exec a sequence of expressions and ret
 >>>type
 extension: (type x 1 (lambda y (add 1 y))) - get types of objects (can get multiple ones)
 >>>unicode
-extension: (unicode (list 1 2 3) 3) - print integers in unicode - this is just for hello world
+extension: (unicode 72 101 108 108 111 44 32 87 111 114 108 100 33) - convert a list of integers into string - this is just for hello world
 ```

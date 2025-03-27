@@ -384,26 +384,15 @@ var printExtension = Extension{
 
 var unicodeExtension = Extension{
 	Exec: func(values ...Object) (Object, error) {
-		var printList func(values ...Object) (Object, error)
-		printList = func(values ...Object) (Object, error) {
-			for _, v := range values {
-				switch v := v.(type) {
-				case int:
-					fmt.Printf("%c", rune(v))
-				case List:
-					fmt.Printf("[")
-					_, err := printList(v)
-					if err != nil {
-						return nil, err
-					}
-					fmt.Printf("]")
-				default:
-					return nil, fmt.Errorf("argument must be int or list")
-				}
+		output := ""
+		for _, v := range values {
+			if v, ok := v.(int); ok {
+				output += fmt.Sprintf("%c", rune(v))
+			} else {
+				return nil, fmt.Errorf("argument must be int or list")
 			}
-			return nil, nil
 		}
-		return printList(values...)
+		return output, nil
 	},
-	Man: "extension: (unicode (list 1 2 3) 3) - print integers in unicode - this is just for hello world",
+	Man: "extension: (unicode 72 101 108 108 111 44 32 87 111 114 108 100 33) - convert a list of integers into string - this is just for hello world",
 }

@@ -7,18 +7,14 @@ import (
 	"os"
 	"os/signal"
 	"sort"
-	"strings"
 	"syscall"
 )
 
-func repl(web bool) (output string, reply func(input string) (output string), clear func() (output string)) {
+func repl() (output string, reply func(input string) (output string), clear func() (output string)) {
 	r := fp.NewStdRuntime()
 	buffer := ""
 	write := func(format string, a ...interface{}) {
 		s := fmt.Sprintf(format, a...)
-		if web {
-			strings.ReplaceAll(s, "\n", "<br>")
-		}
 		buffer += s
 	}
 	writeln := func(s string) {
@@ -74,7 +70,7 @@ func repl(web bool) (output string, reply func(input string) (output string), cl
 }
 
 func main() {
-	output, reply, clearBuffer := repl(false)
+	output, reply, clearBuffer := repl()
 	_, _ = fmt.Fprintf(os.Stderr, output)
 
 	signCh := make(chan os.Signal, 1)

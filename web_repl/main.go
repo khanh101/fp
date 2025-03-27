@@ -8,14 +8,11 @@ import (
 	"syscall/js"
 )
 
-func repl(web bool) (output string, repl func(input string) (output string), clear func() (output string)) {
+func repl() (output string, reply func(input string) (output string), clear func() (output string)) {
 	r := fp.NewStdRuntime()
 	buffer := ""
 	write := func(format string, a ...interface{}) {
 		s := fmt.Sprintf(format, a...)
-		if web {
-			strings.ReplaceAll(s, "\n", "<br>")
-		}
 		buffer += s
 	}
 	writeln := func(s string) {
@@ -70,8 +67,14 @@ func repl(web bool) (output string, repl func(input string) (output string), cle
 		}
 }
 
-var reply func(input string) (output string)
-var clear func() (output string)
+var replyFunc func(input string) (output string)
+var clearFunc func() (output string)
+
+func write(format string, a ...interface{}) {
+	output := fmt.Sprintf(format, a...)
+	output = strings.ReplaceAll(output, "\n", "<br>")
+	js.Global().Call("updateOutput", output)
+}
 
 func evaluate(this js.Value, p []js.Value) interface{} {
 	if len(p) == 0 {
@@ -80,29 +83,21 @@ func evaluate(this js.Value, p []js.Value) interface{} {
 	input := p[0].String()
 
 	// repl here
+	output := replyFunc(input)
 	// end repl here
 
-	// Simple echo for now; replace with real evaluation logic
-	output := fmt.Sprintf("You entered: %s", input)
-	js.Global().Call("updateOutput", output)
-	return nil
-}
-
-func write(format string, a ...interface{}) {
-	s := fmt.Sprintf(format, a...)
-	strings.ReplaceAll(s, "\n", "<br>")
-
+	output = strings.ReplaceAll(output, "\n", "<br>")
+	return output
 }
 
 func main() {
-	// Expose Go functions to the global JavaScript context
+	// initialize
+	output, reply, clearBuffer := repl()
+	replyFunc = reply
+	clearFunc = clearBuffer
+	write(output)
+
 	js.Global().Set("evaluate", js.FuncOf(evaluate))
-	// js.Global().Set("sendOutputToWeb", js.FuncOf(sendOutputToWeb))
-
-	//js.Global().Call("sendOutputToWeb")
-
-	js.Global().Call("updateOutput", "this is weird")
-
 	// Keep WebAssembly running
 	select {}
 }

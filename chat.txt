@@ -158,75 +158,15 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"fp/pkg/fp"
+	"fp/pkg/repl"
 	"os"
 	"os/signal"
-	"sort"
 	"syscall"
 )
 
-func repl() (output string, reply func(input string) (output string), clear func() (output string)) {
-	r := fp.NewStdRuntime()
-	buffer := ""
-	write := func(format string, a ...interface{}) {
-		s := fmt.Sprintf(format, a...)
-		buffer += s
-	}
-	writeln := func(s string) {
-		write(s + "\n")
-	}
-
-	writeln("welcome to fp repl! type <function or module name> for help")
-	write("loaded modules: ")
-	var funcNameList []string
-	for k := range r.Stack[0] {
-		funcNameList = append(funcNameList, string(k))
-	}
-	sort.Strings(funcNameList)
-	for _, name := range funcNameList {
-		write("%s ", name)
-	}
-	writeln("")
-	write(">>>")
-	parser := &fp.Parser{}
-
-	output, buffer = buffer, ""
-	return output, func(input string) (output string) {
-			tokenList := fp.Tokenize(input)
-			executed := false
-			if len(tokenList) == 0 {
-				executed = true
-			} else {
-				for _, token := range tokenList {
-					expr := parser.Input(token)
-					if expr != nil {
-						executed = true
-						output, err := r.Step(expr)
-						if err != nil {
-							writeln(err.Error())
-							continue
-						}
-						write("%v\n", output)
-					}
-				}
-			}
-			if executed {
-				write(">>>")
-			}
-			output, buffer = buffer, ""
-			return output
-		}, func() (output string) {
-			parser.Clear()
-			writeln(">>> (Control + C) to clear buffer, (Control + D) to exit")
-			writeln(">>>")
-			output, buffer = buffer, ""
-			return output
-		}
-}
-
 func main() {
-	output, reply, clearBuffer := repl()
-	_, _ = fmt.Fprintf(os.Stderr, output)
+	repl, welcome := repl.NewFP()
+	_, _ = fmt.Fprintf(os.Stderr, welcome)
 
 	signCh := make(chan os.Signal, 1)
 	signal.Notify(signCh, syscall.SIGINT, syscall.SIGTERM)
@@ -237,7 +177,7 @@ func main() {
 		case s := <-signCh:
 			switch s {
 			case syscall.SIGINT:
-				output := clearBuffer()
+				output := repl.ClearBuffer()
 				_, _ = fmt.Fprintf(os.Stderr, output)
 			case syscall.SIGTERM:
 				os.Exit(0)
@@ -246,7 +186,7 @@ func main() {
 			}
 		default:
 			input := scanner.Text()
-			output := reply(input)
+			output := repl.ReplyInput(input)
 			_, _ = fmt.Fprintf(os.Stderr, output)
 		}
 	}
@@ -260,72 +200,13 @@ package main
 import (
 	"fmt"
 	"fp/pkg/fp"
+	"fp/pkg/repl"
 	"sort"
 	"strings"
 	"syscall/js"
 )
 
-func repl() (output string, reply func(input string) (output string), clear func() (output string)) {
-	r := fp.NewStdRuntime()
-	buffer := ""
-	write := func(format string, a ...interface{}) {
-		s := fmt.Sprintf(format, a...)
-		buffer += s
-	}
-	writeln := func(s string) {
-		write(s + "\n")
-	}
-
-	writeln("welcome to fp repl! type <function or module name> for help")
-	write("loaded modules: ")
-	var funcNameList []string
-	for k := range r.Stack[0] {
-		funcNameList = append(funcNameList, string(k))
-	}
-	sort.Strings(funcNameList)
-	for _, name := range funcNameList {
-		write("%s ", name)
-	}
-	writeln("")
-	write(">>>")
-	parser := &fp.Parser{}
-
-	output, buffer = buffer, ""
-	return output, func(input string) (output string) {
-			tokenList := fp.Tokenize(input)
-			executed := false
-			if len(tokenList) == 0 {
-				executed = true
-			} else {
-				for _, token := range tokenList {
-					expr := parser.Input(token)
-					if expr != nil {
-						executed = true
-						output, err := r.Step(expr)
-						if err != nil {
-							writeln(err.Error())
-							continue
-						}
-						write("%v\n", output)
-					}
-				}
-			}
-			if executed {
-				write(">>>")
-			}
-			output, buffer = buffer, ""
-			return output
-		}, func() (output string) {
-			parser.Clear()
-			writeln(">>> (Control + C) to clear buffer, (Control + D) to exit")
-			writeln(">>>")
-			output, buffer = buffer, ""
-			return output
-		}
-}
-
-var replyFunc func(input string) (output string)
-var clearFunc func() (output string)
+var r repl.REPL
 
 func write(format string, a ...interface{}) {
 	output := fmt.Sprintf(format, a...)
@@ -340,7 +221,7 @@ func evaluate(this js.Value, p []js.Value) interface{} {
 	input := p[0].String()
 
 	// repl here
-	output := replyFunc(input)
+	output := r.ReplyInput(input)
 	// end repl here
 
 	output = strings.ReplaceAll(output, "\n", "<br>")
@@ -349,10 +230,9 @@ func evaluate(this js.Value, p []js.Value) interface{} {
 
 func main() {
 	// initialize
-	output, reply, clearBuffer := repl()
-	replyFunc = reply
-	clearFunc = clearBuffer
-	write(output)
+	var welcome string
+	r, welcome = repl.NewFP()
+	write(welcome)
 
 	js.Global().Set("evaluate", js.FuncOf(evaluate))
 	// Keep WebAssembly running
@@ -1167,6 +1047,90 @@ func (l List) String() string {
 	}
 	s += "]"
 	return s
+}
+./pkg/repl/repl.go
+package repl
+
+import (
+	"fmt"
+	"fp/pkg/fp"
+	"sort"
+)
+
+type REPL interface {
+	ReplyInput(input string) (output string)
+	ClearBuffer() (output string)
+}
+
+type fpRepl struct {
+	runtime *fp.Runtime
+	parser  *fp.Parser
+	buffer  string
+}
+
+func (r *fpRepl) ReplyInput(input string) (output string) {
+	tokenList := fp.Tokenize(input)
+	executed := false
+	if len(tokenList) == 0 {
+		executed = true
+	} else {
+		for _, token := range tokenList {
+			expr := r.parser.Input(token)
+			if expr != nil {
+				executed = true
+				output, err := r.runtime.Step(expr)
+				if err != nil {
+					r.writeln(err.Error())
+					continue
+				}
+				r.write("%v\n", output)
+			}
+		}
+	}
+	if executed {
+		r.write(">>>")
+	}
+	return r.flush()
+}
+
+func (r *fpRepl) ClearBuffer() (output string) {
+	r.parser.Clear()
+	r.writeln(">>> (Control + C) to clear buffer, (Control + D) to exit")
+	r.writeln(">>>")
+	return r.flush()
+}
+
+func (r *fpRepl) flush() (output string) {
+	output, r.buffer = r.buffer, ""
+	return output
+}
+
+func (r *fpRepl) write(format string, a ...interface{}) {
+	r.buffer += fmt.Sprintf(format, a...)
+}
+func (r *fpRepl) writeln(format string, a ...interface{}) {
+	r.write(format+"\n", a...)
+}
+
+func NewFP() (repl REPL, welcome string) {
+	r := &fpRepl{
+		runtime: fp.NewStdRuntime(),
+		parser:  &fp.Parser{},
+		buffer:  "",
+	}
+	r.writeln("welcome to fp repl! type <function or module name> for help")
+	r.write("loaded modules: ")
+	var funcNameList []string
+	for k := range r.runtime.Stack[0] {
+		funcNameList = append(funcNameList, string(k))
+	}
+	sort.Strings(funcNameList)
+	for _, name := range funcNameList {
+		r.write("%s ", name)
+	}
+	r.writeln("")
+	r.write(">>>")
+	return r, r.flush()
 }
 ./example.lisp
 // define multiplication

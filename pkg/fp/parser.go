@@ -55,7 +55,7 @@ func parse(tokenList []Token) (Expr, []Token) {
 		exprList, tokenList := ParseAll(tokenList)
 		tokenList, tail := pop(tokenList) // pop )
 		if tail != ")" {
-			panic("parse error")
+			panicError("parse error")
 		}
 		return LambdaExpr{
 			Name: Name(funcName),

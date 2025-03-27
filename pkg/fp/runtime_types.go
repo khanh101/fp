@@ -37,7 +37,13 @@ type Lambda struct {
 }
 
 func (l Lambda) String() string {
-	return l.Impl.String()
+	s := "(lambda "
+	for _, param := range l.Params {
+		s += param.String() + " "
+	}
+	s += l.Impl.String()
+	s += ")"
+	return s
 }
 
 type Module struct {

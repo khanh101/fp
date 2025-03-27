@@ -6,7 +6,7 @@ A simple functional programming language in 130 lines of code with `functions as
 
 - A go REPL is available by running `go run cmd/repl/main.go`
 
-- A web REPL (Experimental, in WebAssembly, cannot handle `ctrl+c` and `ctrl+d`) is available in `web_repl`
+- A experimental web REPL is available in `web_repl` (cannot handle `ctrl+c` and `ctrl+d`, cannot use `print` for obvious reasons)
 
 - a simple program `example.lisp`
 

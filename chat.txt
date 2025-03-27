@@ -386,9 +386,47 @@ func (r *Runtime) Step(expr Expr, callOptions ...func(*callOption) *callOption) 
 		}
 		panic("runtime error")
 	case LambdaExpr:
-		// check for systemExtension
-		if f, ok := r.systemExtension[expr.Name]; ok {
-			return f(r, expr)
+		// check for user-defined function
+		if f, ok := func() (Lambda, bool) {
+			// 1. get func recursively
+			for i := len(r.Stack) - 1; i >= 0; i-- {
+				if f, ok := r.Stack[i][expr.Name]; ok {
+					if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
+						_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
+					}
+					return f.(Lambda), true
+				}
+			}
+			return Lambda{}, false
+		}(); ok {
+			// 1. evaluate arguments
+			var args []Value
+			for _, arg := range expr.Args {
+				args = append(args, r.Step(arg))
+			}
+			if o.tailCall {
+				// tail call - use last frame
+				for i := 0; i < len(f.Params); i++ {
+					r.Stack[len(r.Stack)-1][f.Params[i]] = args[i]
+				}
+			} else {
+				// 2. add argument to local Frame
+				localFrame := make(Frame).Update(f.Frame)
+				for i := 0; i < len(f.Params); i++ {
+					localFrame[f.Params[i]] = args[i]
+				}
+				// 3. push Frame to Stack
+				r.Stack = append(r.Stack, localFrame)
+			}
+			// 4. exec function
+			v := r.Step(f.Impl)
+			if o.tailCall {
+				// pass
+			} else {
+				// 5. pop Frame from Stack
+				r.Stack = r.Stack[:len(r.Stack)-1]
+			}
+			return v
 		}
 		// check for userExtension
 		if f, ok := r.userExtension[expr.Name]; ok {
@@ -398,47 +436,10 @@ func (r *Runtime) Step(expr Expr, callOptions ...func(*callOption) *callOption) 
 			}
 			return f(args...)
 		}
-		// user-defined function application
-		// 1. get func recursively
-		f := func() Lambda {
-			for i := len(r.Stack) - 1; i >= 0; i-- {
-				if f, ok := r.Stack[i][expr.Name]; ok {
-					if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
-						_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
-					}
-					return f.(Lambda)
-				}
-			}
-			panic("runtime error")
-		}()
-		// 1. evaluate arguments
-		var args []Value
-		for _, arg := range expr.Args {
-			args = append(args, r.Step(arg))
+		// check for systemExtension
+		if f, ok := r.systemExtension[expr.Name]; ok {
+			return f(r, expr)
 		}
-		if o.tailCall {
-			// tail call - use last frame
-			for i := 0; i < len(f.Params); i++ {
-				r.Stack[len(r.Stack)-1][f.Params[i]] = args[i]
-			}
-		} else {
-			// 2. add argument to local Frame
-			localFrame := make(Frame).Update(f.Frame)
-			for i := 0; i < len(f.Params); i++ {
-				localFrame[f.Params[i]] = args[i]
-			}
-			// 3. push Frame to Stack
-			r.Stack = append(r.Stack, localFrame)
-		}
-		// 4. exec function
-		v := r.Step(f.Impl)
-		if o.tailCall {
-			// pass
-		} else {
-			// 5. pop Frame from Stack
-			r.Stack = r.Stack[:len(r.Stack)-1]
-		}
-		return v
 	default:
 		panic("runtime error")
 	}

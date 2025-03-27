@@ -4,7 +4,9 @@ A simple functional programming language in 130 lines of code with `functions as
 
 ## How to use?
 
-A REPL is available by running `go run cmd/repl/main.go`
+- A go REPL is available by running `go run cmd/repl/main.go`
+
+- A web REPL (in WebAssembly) is available in `web_repl`
 
 - a simple program `example.lisp`
 

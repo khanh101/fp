@@ -20,7 +20,7 @@ func NewRuntime() *Runtime {
 		var v Value
 		for i := 1; i < len(expr.Args); i++ {
 			if i == len(expr.Args)-1 {
-				v = r.Step(expr.Args[i], WithTailCall)
+				v = r.Step(expr.Args[i], WithTailCallOptimization)
 			} else {
 				v = r.Step(expr.Args[i])
 			}
@@ -53,9 +53,9 @@ func NewRuntime() *Runtime {
 			}
 			panic("runtime error")
 		}()
-		return r.Step(expr.Args[i+1], WithTailCall)
+		return r.Step(expr.Args[i+1], WithTailCallOptimization)
 	}).WithSystemExtension("sign", func(r *Runtime, expr LambdaExpr) Value {
-		v := r.Step(expr.Args[0], WithTailCall).(int)
+		v := r.Step(expr.Args[0], WithTailCallOptimization).(int)
 		switch {
 		case v > 0:
 			return +1
@@ -67,13 +67,13 @@ func NewRuntime() *Runtime {
 		panic("runtime error")
 	}).WithSystemExtension("sub", func(r *Runtime, expr LambdaExpr) Value {
 		a := r.Step(expr.Args[0]).(int)
-		b := r.Step(expr.Args[1], WithTailCall).(int)
+		b := r.Step(expr.Args[1], WithTailCallOptimization).(int)
 		return a - b
 	}).WithSystemExtension("add", func(r *Runtime, expr LambdaExpr) Value {
 		var v int
 		for i := 0; i < len(expr.Args); i++ {
 			if i == len(expr.Args)-1 {
-				v += r.Step(expr.Args[i], WithTailCall).(int)
+				v += r.Step(expr.Args[i], WithTailCallOptimization).(int)
 			} else {
 				v += r.Step(expr.Args[i]).(int)
 			}
@@ -83,7 +83,7 @@ func NewRuntime() *Runtime {
 		var v Value
 		for i := 0; i < len(expr.Args); i++ {
 			if i == len(expr.Args)-1 {
-				v = r.Step(expr.Args[i], WithTailCall)
+				v = r.Step(expr.Args[i], WithTailCallOptimization)
 			} else {
 				v = r.Step(expr.Args[i])
 			}
@@ -125,22 +125,22 @@ func (f Frame) Update(otherFrame Frame) Frame {
 	return f
 }
 
-type callOption struct {
-	tailCall bool
+type stepOption struct {
+	tailCallOptimization bool
 }
 
-func WithTailCall(o *callOption) *callOption {
-	o.tailCall = false // TODO - debug tailcall
+func WithTailCallOptimization(o *stepOption) *stepOption {
+	o.tailCallOptimization = false // TODO - debug tailcall
 	return o
 }
 
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
-func (r *Runtime) Step(expr Expr, callOptions ...func(*callOption) *callOption) Value {
-	o := &callOption{
-		tailCall: false,
+func (r *Runtime) Step(expr Expr, stepOptions ...func(*stepOption) *stepOption) Value {
+	o := &stepOption{
+		tailCallOptimization: false,
 	}
-	for _, opt := range callOptions {
+	for _, opt := range stepOptions {
 		o = opt(o)
 	}
 	switch expr := expr.(type) {
@@ -179,7 +179,7 @@ func (r *Runtime) Step(expr Expr, callOptions ...func(*callOption) *callOption) 
 			for _, arg := range expr.Args {
 				args = append(args, r.Step(arg))
 			}
-			if o.tailCall {
+			if o.tailCallOptimization {
 				// tail call - use last frame
 				for i := 0; i < len(f.Params); i++ {
 					r.Stack[len(r.Stack)-1][f.Params[i]] = args[i]
@@ -195,7 +195,7 @@ func (r *Runtime) Step(expr Expr, callOptions ...func(*callOption) *callOption) 
 			}
 			// 4. exec function
 			v := r.Step(f.Impl)
-			if o.tailCall {
+			if o.tailCallOptimization {
 				// pass
 			} else {
 				// 5. pop Frame from Stack

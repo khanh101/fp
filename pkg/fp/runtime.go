@@ -8,10 +8,14 @@ import (
 
 const DETECT_NONPURE = true
 
-func NewBasicRuntime() *Runtime {
+// NewPlainRuntime - language specification
+func NewPlainRuntime() *Runtime {
 	return (&Runtime{
 		Stack: []Frame{
 			make(Frame),
+		},
+		parseToken: func(expr string) (interface{}, error) {
+			return strconv.Atoi(expr)
 		},
 		extension: make(map[Name]func(r *Runtime, expr LambdaExpr) Value),
 	}).WithExtension("let", func(r *Runtime, expr LambdaExpr) Value {
@@ -63,7 +67,12 @@ func NewBasicRuntime() *Runtime {
 			}
 		}
 		return v
-	}).WithArithmeticExtension("sign", func(value ...Value) Value {
+	})
+}
+
+// NewBasicRuntime : minimal set of extensions for Turing completeness
+func NewBasicRuntime() *Runtime {
+	return NewPlainRuntime().WithArithmeticExtension("sign", func(value ...Value) Value {
 		v := value[len(value)-1].(int)
 		switch {
 		case v > 0:
@@ -108,8 +117,9 @@ func (r *Runtime) WithExtension(name Name, f func(r *Runtime, expr LambdaExpr) V
 }
 
 type Runtime struct {
-	Stack     []Frame
-	extension map[Name]func(r *Runtime, expr LambdaExpr) Value
+	Stack      []Frame
+	parseToken func(Token) (interface{}, error)
+	extension  map[Name]func(r *Runtime, expr LambdaExpr) Value
 }
 
 // Value : union of int, string, Lambda - TODO : introduce new data types
@@ -150,8 +160,8 @@ func (r *Runtime) Step(expr Expr, stepOptions ...func(*stepOption) *stepOption) 
 	switch expr := expr.(type) {
 	case Name:
 		var v Value
-		// convert to number
-		v, err := strconv.Atoi(string(expr))
+		// parse token
+		v, err := r.parseToken(string(expr))
 		if err == nil {
 			return v
 		}
@@ -211,6 +221,8 @@ func (r *Runtime) Step(expr Expr, stepOptions ...func(*stepOption) *stepOption) 
 		if f, ok := r.extension[expr.Name]; ok {
 			return f(r, expr)
 		}
+		panic("runtime error")
+
 	default:
 		panic("runtime error")
 	}

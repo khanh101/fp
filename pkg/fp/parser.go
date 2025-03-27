@@ -50,6 +50,10 @@ type Parser struct {
 	Buffer []Token
 }
 
+func (p *Parser) Clear() {
+	p.Buffer = []Token{}
+}
+
 func (p *Parser) Input(tok Token) Expr {
 	p.Buffer = append(p.Buffer, tok)
 	// try parse single // TODO : do this for simplicity

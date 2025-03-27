@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"fp/pkg/fp"
 	"os"
+	"os/signal"
 	"sort"
+	"syscall"
 )
 
 func write(format string, args ...interface{}) {
@@ -48,29 +50,44 @@ func main() {
 	}
 	writeln("")
 
+	signCh := make(chan os.Signal, 1)
+	signal.Notify(signCh, syscall.SIGINT, syscall.SIGTERM)
+
 	parser := &fp.Parser{}
 
 	scanner := bufio.NewScanner(os.Stdin)
 	write(">>>")
 	for scanner.Scan() {
-		line := scanner.Text()
-		tokenList := fp.Tokenize(line)
-		executed := false
-		for _, token := range tokenList {
-			expr := parser.Input(token)
-			if expr != nil {
+		select {
+		case <-signCh:
+			parser.Clear()
+			writeln(">>> (Control + C) to clear buffer, (Control + D) to exit")
+			writeln(">>>")
+		default:
+			line := scanner.Text()
+			tokenList := fp.Tokenize(line)
+			executed := false
+			if len(tokenList) == 0 {
 				executed = true
-				output, err := r.Step(expr)
-				if err != nil {
-					writeln(err.Error())
-					continue
+			} else {
+				for _, token := range tokenList {
+					expr := parser.Input(token)
+					if expr != nil {
+						executed = true
+						output, err := r.Step(expr)
+						if err != nil {
+							writeln(err.Error())
+							continue
+						}
+						write("%v\n", output)
+					}
 				}
-				write("%v\n", output)
+			}
+			if executed {
+				write(">>>")
 			}
 		}
-		if executed {
-			write(">>>")
-		}
+
 	}
 	if err := scanner.Err(); err != nil {
 		panic(err)

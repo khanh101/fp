@@ -145,22 +145,39 @@
     });
 
     // Function to handle user input
+    const outputEl = document.getElementById("output");
     const inputEl = document.getElementById("input");
+    let history = [];
+    let historyIndex = -1;
+
+    function runREPL() {
+        const input = inputEl.value.trim();
+        if (!input) return;
+
+        history.push(input);
+        historyIndex = history.length;
+
+        // Call the Go function to evaluate input
+        const result = window.evaluate(input); // Correct way to call Go function from JavaScript
+        outputEl.innerHTML += `<div>>> ${input}</div><div>${result}</div>`;
+        outputEl.scrollTop = outputEl.scrollHeight;
+
+        inputEl.value = "";
+        inputEl.style.height = "20px"; // Reset textarea height after each input
+    }
+
     inputEl.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault(); // Prevent default Enter behavior (new line)
-            const input = inputEl.value.trim();
-            if (input) {
-                // Call the Go function to evaluate input
-                const result = window.evaluate(input); // Correct way to call Go function from JavaScript
-                updateOutput(`>>> ${input}\n${result}`);
-            }
-            inputEl.value = "";
-        } else if (e.key === "ArrowUp" && history.length > 0) {
-            historyIndex = Math.max(0, historyIndex - 1);
+            e.preventDefault();  // Prevent default Enter behavior (new line)
+            runREPL();           // Trigger REPL evaluation
+        } else if (e.key === "Enter" && e.shiftKey) {
+            // Allow multi-line input (adjust height)
+            inputEl.style.height = inputEl.scrollHeight + "px";
+        } else if (e.key === "ArrowUp" && historyIndex > 0) {
+            historyIndex--; // Move up in the history
             inputEl.value = history[historyIndex];
-        } else if (e.key === "ArrowDown") {
-            historyIndex = Math.min(history.length, historyIndex + 1);
+        } else if (e.key === "ArrowDown" && historyIndex < history.length - 1) {
+            historyIndex++; // Move down in the history
             inputEl.value = history[historyIndex] || "";
         }
     });

@@ -218,4 +218,5 @@ func (r *Runtime) Step(expr Expr, callOptions ...func(*callOption) *callOption) 
 	default:
 		panic("runtime error")
 	}
+	panic("runtime error")
 }

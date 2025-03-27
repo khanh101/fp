@@ -282,7 +282,7 @@ import (
 
 const DETECT_NONPURE = true
 
-func (r *Runtime) getFromStack(name Name) (Object, error) {
+func (r *Runtime) searchOnStack(name Name) (Object, error) {
 	for i := len(r.Stack) - 1; i >= 0; i-- {
 		if o, ok := r.Stack[i][name]; ok {
 			if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
@@ -292,46 +292,6 @@ func (r *Runtime) getFromStack(name Name) (Object, error) {
 		}
 	}
 	return nil, fmt.Errorf("object not found %s", name)
-}
-
-func (r *Runtime) getFuncOrModule(name Name) (Object, error) {
-	// find in stack for user-defined function or module
-	f, ok, err := func() (Object, bool, error) {
-		// 1. get func recursively
-		for i := len(r.Stack) - 1; i >= 0; i-- {
-			if f, ok := r.Stack[i][name]; ok {
-				if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
-					_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
-				}
-				switch f := f.(type) {
-				case Lambda, Module:
-					return f, true, nil
-				default:
-					return nil, false, fmt.Errorf("unexpected type %T", f)
-				}
-			}
-		}
-		return nil, false, nil
-	}()
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, fmt.Errorf("function not found for %s", name)
-	}
-	return f, nil
-}
-
-func (r *Runtime) getVar(name Name) (Object, error) {
-	for i := len(r.Stack) - 1; i >= 0; i-- {
-		if v, ok := r.Stack[i][name]; ok {
-			if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
-				_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
-			}
-			return v, nil
-		}
-	}
-	return nil, fmt.Errorf("runtime error: variable %s not found", name.String())
 }
 
 // Step - implement minimal set of instructions for the language to be Turing complete
@@ -346,10 +306,10 @@ func (r *Runtime) Step(expr Expr) (Object, error) {
 			return v, nil
 		}
 		// find in stack for variable
-		return r.getFromStack(expr)
+		return r.searchOnStack(expr)
 
 	case LambdaExpr:
-		f, err := r.getFromStack(expr.Name)
+		f, err := r.searchOnStack(expr.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -435,7 +395,9 @@ func NewStdRuntime() *Runtime {
 		LoadExtension("list", listExtension).
 		LoadExtension("append", appendExtension).
 		LoadExtension("slice", sliceExtension).
-		LoadExtension("peak", peakExtension)
+		LoadExtension("peak", peakExtension).
+		LoadModule("map", mapModule).
+		LoadExtension("type", typeExtension)
 }
 
 // NewDebugRuntime : NewBasicRuntime + debug extensions
@@ -791,30 +753,78 @@ func peakExtension(value ...Object) (Object, error) {
 }
 
 // TODO - implement map filter reduce
-/*
 func mapModule(r *Runtime, expr LambdaExpr) (Object, error) {
 	if len(expr.Args) != 2 {
 		return nil, fmt.Errorf("map requires 2 arguments")
 	}
-	l, ok := expr.Args[0].(List)
+	l1, err := r.Step(expr.Args[0])
+	if err != nil {
+		return nil, err
+	}
+	l, ok := l1.(List)
 	if !ok {
 		return nil, fmt.Errorf("first argument must be list")
 	}
-	funcName, ok := expr.Args[1].(Name)
-	if !ok {
-		return nil, fmt.Errorf("second argument must be name")
+	f1, err := r.Step(expr.Args[1])
+	if err != nil {
+		return nil, err
 	}
 	var outputs List
-	for _, v := range l {
-		o, err := r.Step(LambdaExpr{
-			Name: funcName,
-			Args: []Expr{
-				v
-			},
-		})
+	switch f := f1.(type) {
+	case Lambda:
+		if len(f.Params) != 1 {
+			return nil, fmt.Errorf("map function requires 1 argument")
+		}
+		for _, v := range l {
+			// 2. add argument to local Frame
+			localFrame := make(Frame).Update(f.Frame)
+			localFrame[f.Params[0]] = v
+			// 3. push Frame to Stack
+			r.Stack = append(r.Stack, localFrame)
+			// 4. exec function
+			o, err := r.Step(f.Impl)
+			// 5. pop Frame from Stack
+			r.Stack = r.Stack[:len(r.Stack)-1]
+			// 6. append o
+			if err != nil {
+				return nil, err
+			}
+			outputs = append(outputs, o)
+		}
+	case Module:
+		for _, v := range l {
+			// 2. add argument to local Frame
+			localFrame := make(Frame)
+			localFrame["x"] = v // dummy variable
+			// 3. make dummy expr and exec
+			o, err := f(r, LambdaExpr{
+				Name: "",
+				Args: []Expr{Name("x")}, // dummy variable
+			})
+			// 5. pop Frame from Stack
+			r.Stack = r.Stack[:len(r.Stack)-1]
+			// 6. append o
+			if err != nil {
+				return nil, err
+			}
+			outputs = append(outputs, o)
+		}
+	default:
+		return nil, fmt.Errorf("runtime error: map module requires a function")
 	}
+	return outputs, nil
 }
-*/
+
+func typeExtension(value ...Object) (Object, error) {
+	var types List
+	for _, v := range value {
+		types = append(types, getType(v))
+	}
+	if len(types) == 1 {
+		return types[0], nil
+	}
+	return types, nil
+}
 
 func stackModule(r *Runtime, expr LambdaExpr) (Object, error) {
 	_, err := r.stepMany(expr.Args...)
@@ -885,6 +895,30 @@ import "fmt"
 
 // Object : object union of int, Lambda, Module, List - TODO : introduce new data types
 type Object interface{}
+
+func getType(o Object) String {
+	switch o.(type) {
+	case int:
+		return "int"
+	case String:
+		return "String"
+	case Lambda:
+		return "Lambda"
+	case Module:
+		return "Module"
+	case List:
+		return "List"
+	default:
+		return "unknown"
+	}
+}
+
+type String string
+
+func (s String) String() string {
+	return string(s)
+}
+
 type Lambda struct {
 	Params []Name `json:"params,omitempty"`
 	Impl   Expr   `json:"impl,omitempty"`
@@ -1007,4 +1041,7 @@ func (l List) String() string {
 
 (print (fibonacci 20) 11)                                // print the 20-th fibonacci
 
+// test map on list
+(let x (list 1 2 3))
+(map x (lambda y (add 1 y)))
 do you have any comment on this?

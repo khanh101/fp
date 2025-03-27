@@ -36,7 +36,9 @@ func NewStdRuntime() *Runtime {
 		LoadExtension("list", listExtension).
 		LoadExtension("append", appendExtension).
 		LoadExtension("slice", sliceExtension).
-		LoadExtension("peak", peakExtension)
+		LoadExtension("peak", peakExtension).
+		LoadModule("map", mapModule).
+		LoadExtension("type", typeExtension)
 }
 
 // NewDebugRuntime : NewBasicRuntime + debug extensions

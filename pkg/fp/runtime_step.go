@@ -7,7 +7,7 @@ import (
 
 const DETECT_NONPURE = true
 
-func (r *Runtime) getFromStack(name Name) (Object, error) {
+func (r *Runtime) searchOnStack(name Name) (Object, error) {
 	for i := len(r.Stack) - 1; i >= 0; i-- {
 		if o, ok := r.Stack[i][name]; ok {
 			if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
@@ -17,46 +17,6 @@ func (r *Runtime) getFromStack(name Name) (Object, error) {
 		}
 	}
 	return nil, fmt.Errorf("object not found %s", name)
-}
-
-func (r *Runtime) getFuncOrModule(name Name) (Object, error) {
-	// find in stack for user-defined function or module
-	f, ok, err := func() (Object, bool, error) {
-		// 1. get func recursively
-		for i := len(r.Stack) - 1; i >= 0; i-- {
-			if f, ok := r.Stack[i][name]; ok {
-				if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
-					_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
-				}
-				switch f := f.(type) {
-				case Lambda, Module:
-					return f, true, nil
-				default:
-					return nil, false, fmt.Errorf("unexpected type %T", f)
-				}
-			}
-		}
-		return nil, false, nil
-	}()
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, fmt.Errorf("function not found for %s", name)
-	}
-	return f, nil
-}
-
-func (r *Runtime) getVar(name Name) (Object, error) {
-	for i := len(r.Stack) - 1; i >= 0; i-- {
-		if v, ok := r.Stack[i][name]; ok {
-			if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
-				_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
-			}
-			return v, nil
-		}
-	}
-	return nil, fmt.Errorf("runtime error: variable %s not found", name.String())
 }
 
 // Step - implement minimal set of instructions for the language to be Turing complete
@@ -71,10 +31,10 @@ func (r *Runtime) Step(expr Expr) (Object, error) {
 			return v, nil
 		}
 		// find in stack for variable
-		return r.getFromStack(expr)
+		return r.searchOnStack(expr)
 
 	case LambdaExpr:
-		f, err := r.getFromStack(expr.Name)
+		f, err := r.searchOnStack(expr.Name)
 		if err != nil {
 			return nil, err
 		}

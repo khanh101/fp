@@ -6,6 +6,30 @@ import "fmt"
 
 // Object : object union of int, Lambda, Module, List - TODO : introduce new data types
 type Object interface{}
+
+func getType(o Object) String {
+	switch o.(type) {
+	case int:
+		return "int"
+	case String:
+		return "String"
+	case Lambda:
+		return "Lambda"
+	case Module:
+		return "Module"
+	case List:
+		return "List"
+	default:
+		return "unknown"
+	}
+}
+
+type String string
+
+func (s String) String() string {
+	return string(s)
+}
+
 type Lambda struct {
 	Params []Name `json:"params,omitempty"`
 	Impl   Expr   `json:"impl,omitempty"`

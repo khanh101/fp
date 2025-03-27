@@ -193,30 +193,78 @@ func peakExtension(value ...Object) (Object, error) {
 }
 
 // TODO - implement map filter reduce
-/*
 func mapModule(r *Runtime, expr LambdaExpr) (Object, error) {
 	if len(expr.Args) != 2 {
 		return nil, fmt.Errorf("map requires 2 arguments")
 	}
-	l, ok := expr.Args[0].(List)
+	l1, err := r.Step(expr.Args[0])
+	if err != nil {
+		return nil, err
+	}
+	l, ok := l1.(List)
 	if !ok {
 		return nil, fmt.Errorf("first argument must be list")
 	}
-	funcName, ok := expr.Args[1].(Name)
-	if !ok {
-		return nil, fmt.Errorf("second argument must be name")
+	f1, err := r.Step(expr.Args[1])
+	if err != nil {
+		return nil, err
 	}
 	var outputs List
-	for _, v := range l {
-		o, err := r.Step(LambdaExpr{
-			Name: funcName,
-			Args: []Expr{
-				v
-			},
-		})
+	switch f := f1.(type) {
+	case Lambda:
+		if len(f.Params) != 1 {
+			return nil, fmt.Errorf("map function requires 1 argument")
+		}
+		for _, v := range l {
+			// 2. add argument to local Frame
+			localFrame := make(Frame).Update(f.Frame)
+			localFrame[f.Params[0]] = v
+			// 3. push Frame to Stack
+			r.Stack = append(r.Stack, localFrame)
+			// 4. exec function
+			o, err := r.Step(f.Impl)
+			// 5. pop Frame from Stack
+			r.Stack = r.Stack[:len(r.Stack)-1]
+			// 6. append o
+			if err != nil {
+				return nil, err
+			}
+			outputs = append(outputs, o)
+		}
+	case Module:
+		for _, v := range l {
+			// 2. add argument to local Frame
+			localFrame := make(Frame)
+			localFrame["x"] = v // dummy variable
+			// 3. make dummy expr and exec
+			o, err := f(r, LambdaExpr{
+				Name: "",
+				Args: []Expr{Name("x")}, // dummy variable
+			})
+			// 5. pop Frame from Stack
+			r.Stack = r.Stack[:len(r.Stack)-1]
+			// 6. append o
+			if err != nil {
+				return nil, err
+			}
+			outputs = append(outputs, o)
+		}
+	default:
+		return nil, fmt.Errorf("runtime error: map module requires a function")
 	}
+	return outputs, nil
 }
-*/
+
+func typeExtension(value ...Object) (Object, error) {
+	var types List
+	for _, v := range value {
+		types = append(types, getType(v))
+	}
+	if len(types) == 1 {
+		return types[0], nil
+	}
+	return types, nil
+}
 
 func stackModule(r *Runtime, expr LambdaExpr) (Object, error) {
 	_, err := r.stepMany(expr.Args...)

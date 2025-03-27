@@ -92,3 +92,6 @@
 
 (print (fibonacci 20) 11)                                // print the 20-th fibonacci
 
+// test map on list
+(let x (list 1 2 3))
+(map x (lambda y (add 1 y)))

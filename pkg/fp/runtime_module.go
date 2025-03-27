@@ -196,6 +196,8 @@ func peakArithmeticExtension(value ...Object) (Object, error) {
 	return l[i], nil
 }
 
+// TODO - implement map filter reduce
+
 func stackModule(r *Runtime, expr LambdaExpr) (Object, error) {
 	_, err := r.stepWithTailCallOptimization(expr.Args...)
 	if err != nil {

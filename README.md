@@ -51,4 +51,4 @@ no 😅
 ## a simple program
 
 - see `example.lisp`
-- hello world ! `(unicode 72 101 108 108 111 44 32 87 111 114 108 100 33)`
+- hello world ! `echo "(unicode 72 101 108 108 111 44 32 87 111 114 108 100 33)" | go run cmd/repl/main.go 2> /dev/null`

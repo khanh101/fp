@@ -5,7 +5,102 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Python-like REPL in Go</title>
     <script src="wasm_exec.js"></script>
-    </head>
+    <style>
+        body {
+            background-color: #181818;
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #repl-container {
+            width: 90%;
+            max-width: 800px;
+            min-width: 400px;
+            padding: 20px;
+            background-color: #222;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+        }
+
+        #output {
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 14px;
+            padding: 12px;
+            background-color: #1d1d1d;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            color: #c1c1c1;
+            word-wrap: break-word;
+        }
+
+        .input-line {
+            display: flex;
+            align-items: center;
+        }
+
+        #prompt {
+            color: #ffcc00;
+        }
+
+        #input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            width: 100%;
+            min-height: 40px;
+            resize: none;
+            overflow-y: hidden;
+        }
+
+        #input:focus {
+            outline: none;
+        }
+
+        #copy-button {
+            background-color: rgba(212, 182, 0, 0.65);
+            color: #181818;
+            border: none;
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        #copy-button:hover {
+            background-color: #00b3b3;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 14px;
+            background-color: white;
+            margin-left: 2px;
+            animation: blink 1s steps(2, start) infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
 <body>
 
 <div id="repl-container">
@@ -23,37 +118,24 @@
         const go = new Go();
         WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
             go.run(result.instance);
+
+            // Optional: You can call the Go function that sends data automatically
+            // window.sendOutputToWeb(); // Uncomment this if you want to trigger it manually
         });
     } else {
         console.log("WebAssembly is not supported in your browser");
     }
 
-    const outputEl = document.getElementById("output");
-    const inputEl = document.getElementById("input");
-    const copyButton = document.getElementById("copy-button");
-    let history = [];
-    let historyIndex = -1;
-
-    function runREPL() {
-        const input = inputEl.value.trim();
-        if (!input) return;
-
-        history.push(input);
-        historyIndex = history.length;
-
-        // Call the Go function to evaluate input
-        const result = window.evaluate(input);
-
-        // Display input and result in the output div
-        outputEl.innerHTML += `<div>>>> ${input}</div><div>${result}</div>`;
+    // JavaScript function to update the output area with content
+    function updateOutput(outputText) {
+        const outputEl = document.getElementById("output");
+        outputEl.innerHTML += `<div>${outputText}</div>`;
         outputEl.scrollTop = outputEl.scrollHeight;
-
-        inputEl.value = "";
-        inputEl.style.height = "25px"; // Reset textarea height after each input
     }
 
     // Copy all output to clipboard
-    copyButton.addEventListener("click", () => {
+    document.getElementById("copy-button").addEventListener("click", () => {
+        const outputEl = document.getElementById("output");
         const range = document.createRange();
         range.selectNodeContents(outputEl);
         const selection = window.getSelection();
@@ -62,13 +144,18 @@
         document.execCommand('copy');
     });
 
+    // Function to handle user input
+    const inputEl = document.getElementById("input");
     inputEl.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();  // Prevent default Enter behavior (new line)
-            runREPL();           // Trigger REPL evaluation
-        } else if (e.key === "Enter" && e.shiftKey) {
-            // Allow multi-line input (adjust height)
-            inputEl.style.height = inputEl.scrollHeight + "px";
+            e.preventDefault(); // Prevent default Enter behavior (new line)
+            const input = inputEl.value.trim();
+            if (input) {
+                // Call the Go function to evaluate input
+                const result = window.evaluate(input); // Correct way to call Go function from JavaScript
+                updateOutput(`>>> ${input}\n${result}`);
+            }
+            inputEl.value = "";
         } else if (e.key === "ArrowUp" && history.length > 0) {
             historyIndex = Math.max(0, historyIndex - 1);
             inputEl.value = history[historyIndex];

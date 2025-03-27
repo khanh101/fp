@@ -175,7 +175,7 @@ func writeln(format string, args ...interface{}) {
 }
 
 func main() {
-	r := fp.NewDebugRuntime().
+	r := fp.NewStdRuntime().
 		LoadExtension("div", fp.Extension{
 			Exec: func(value ...fp.Object) (fp.Object, error) {
 				if len(value) != 2 {
@@ -234,7 +234,7 @@ func writeln(format string, args ...interface{}) {
 }
 
 func main() {
-	r := fp.NewDebugRuntime().
+	r := fp.NewStdRuntime().
 		LoadExtension("div", fp.Extension{
 			Exec: func(value ...fp.Object) (fp.Object, error) {
 				if len(value) != 2 {
@@ -427,20 +427,19 @@ func NewBasicRuntime() *Runtime {
 		LoadExtension("sign", signExtension)
 }
 
+// NewStdRuntime : NewPlainRuntime + standard functions
 func NewStdRuntime() *Runtime {
 	return NewBasicRuntime().
+		LoadExtension("mul", mulExtension).
+		LoadExtension("div", divExtension).
+		LoadExtension("mod", modExtension).
 		LoadExtension("print", printExtension).
 		LoadExtension("list", listExtension).
 		LoadExtension("append", appendExtension).
 		LoadExtension("slice", sliceExtension).
 		LoadExtension("peak", peakExtension).
 		LoadModule("map", mapModule).
-		LoadExtension("type", typeExtension)
-}
-
-// NewDebugRuntime : NewBasicRuntime + debug extensions
-func NewDebugRuntime() *Runtime {
-	return NewStdRuntime().
+		LoadExtension("type", typeExtension).
 		LoadModule("stack", stackModule)
 }
 ./pkg/fp/ast.go
@@ -713,6 +712,21 @@ var addExtension = Extension{
 	Man: "extension: (add 1 (add 2 3) 3) - exec a sequence of expressions and return the sum",
 }
 
+var mulExtension = Extension{
+	Exec: func(values ...Object) (Object, error) {
+		sum := 1
+		for i := 0; i < len(values); i++ {
+			v, ok := values[i].(int)
+			if !ok {
+				return nil, fmt.Errorf("multiplying non-integer values")
+			}
+			sum *= v
+		}
+		return sum, nil
+	},
+	Man: "extension: (mul 1 (add 2 3) 3) - exec a sequence of expressions and return the product",
+}
+
 var subExtension = Extension{
 	Exec: func(values ...Object) (Object, error) {
 		if len(values) != 2 {
@@ -729,6 +743,48 @@ var subExtension = Extension{
 		return a - b, nil
 	},
 	Man: "extension: (sub 2 (add 1 1)) - exec two expressions and return difference",
+}
+
+var divExtension = Extension{
+	Exec: func(values ...Object) (Object, error) {
+		if len(values) != 2 {
+			return nil, fmt.Errorf("dividing requires 2 arguments")
+		}
+		a, ok := values[0].(int)
+		if !ok {
+			return nil, fmt.Errorf("dividing non-integer value")
+		}
+		b, ok := values[1].(int)
+		if !ok {
+			return nil, fmt.Errorf("dividing non-integer value")
+		}
+		if b == 0 {
+			return nil, fmt.Errorf("division by zero")
+		}
+		return a / b, nil
+	},
+	Man: "extension: (div 2 (add 1 1)) - exec two expressions and return ratio",
+}
+
+var modExtension = Extension{
+	Exec: func(values ...Object) (Object, error) {
+		if len(values) != 2 {
+			return nil, fmt.Errorf("dividing requires 2 arguments")
+		}
+		a, ok := values[0].(int)
+		if !ok {
+			return nil, fmt.Errorf("dividing non-integer value")
+		}
+		b, ok := values[1].(int)
+		if !ok {
+			return nil, fmt.Errorf("dividing non-integer value")
+		}
+		if b == 0 {
+			return nil, fmt.Errorf("division by zero")
+		}
+		return a % b, nil
+	},
+	Man: "extension: (mod 2 (add 1 1)) - exec two expressions and return modulo",
 }
 
 var signExtension = Extension{

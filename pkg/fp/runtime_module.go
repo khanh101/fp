@@ -115,6 +115,21 @@ var addExtension = Extension{
 	Man: "extension: (add 1 (add 2 3) 3) - exec a sequence of expressions and return the sum",
 }
 
+var mulExtension = Extension{
+	Exec: func(values ...Object) (Object, error) {
+		sum := 1
+		for i := 0; i < len(values); i++ {
+			v, ok := values[i].(int)
+			if !ok {
+				return nil, fmt.Errorf("multiplying non-integer values")
+			}
+			sum *= v
+		}
+		return sum, nil
+	},
+	Man: "extension: (mul 1 (add 2 3) 3) - exec a sequence of expressions and return the product",
+}
+
 var subExtension = Extension{
 	Exec: func(values ...Object) (Object, error) {
 		if len(values) != 2 {
@@ -131,6 +146,48 @@ var subExtension = Extension{
 		return a - b, nil
 	},
 	Man: "extension: (sub 2 (add 1 1)) - exec two expressions and return difference",
+}
+
+var divExtension = Extension{
+	Exec: func(values ...Object) (Object, error) {
+		if len(values) != 2 {
+			return nil, fmt.Errorf("dividing requires 2 arguments")
+		}
+		a, ok := values[0].(int)
+		if !ok {
+			return nil, fmt.Errorf("dividing non-integer value")
+		}
+		b, ok := values[1].(int)
+		if !ok {
+			return nil, fmt.Errorf("dividing non-integer value")
+		}
+		if b == 0 {
+			return nil, fmt.Errorf("division by zero")
+		}
+		return a / b, nil
+	},
+	Man: "extension: (div 2 (add 1 1)) - exec two expressions and return ratio",
+}
+
+var modExtension = Extension{
+	Exec: func(values ...Object) (Object, error) {
+		if len(values) != 2 {
+			return nil, fmt.Errorf("dividing requires 2 arguments")
+		}
+		a, ok := values[0].(int)
+		if !ok {
+			return nil, fmt.Errorf("dividing non-integer value")
+		}
+		b, ok := values[1].(int)
+		if !ok {
+			return nil, fmt.Errorf("dividing non-integer value")
+		}
+		if b == 0 {
+			return nil, fmt.Errorf("division by zero")
+		}
+		return a % b, nil
+	},
+	Man: "extension: (mod 2 (add 1 1)) - exec two expressions and return modulo",
 }
 
 var signExtension = Extension{

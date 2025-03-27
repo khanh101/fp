@@ -20,7 +20,7 @@ func writeln(format string, args ...interface{}) {
 }
 
 func main() {
-	r := fp.NewDebugRuntime().
+	r := fp.NewStdRuntime().
 		LoadExtension("div", fp.Extension{
 			Exec: func(value ...fp.Object) (fp.Object, error) {
 				if len(value) != 2 {

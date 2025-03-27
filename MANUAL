@@ -17,6 +17,10 @@ module: (let x 3) - assign value 3 to local variable x
 extension: (list 1 2 (lambda x (add x 1))) - make a list
 >>>map
 extension: (map l (lambda y (add 1 y))) - map
+>>>mod
+extension: (mod 2 (add 1 1)) - exec two expressions and return modulo
+>>>mul
+extension: (mul 1 (add 2 3) 3) - exec a sequence of expressions and return the product
 >>>peak
 extension: (peak l 3 2) - get elem from list (can get multiple elements)
 >>>print

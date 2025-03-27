@@ -19,32 +19,32 @@ func main() {
 		panic("parse error")
 	}
 
-	r := fp.NewBasicRuntime().WithArithmeticExtension("div", func(nums ...fp.Value) fp.Value {
+	r := fp.NewBasicRuntime().WithArithmeticExtension("div", func(nums ...fp.Object) fp.Object {
 		if len(nums) != 2 {
 			panic("runtime error")
 		}
 		return nums[0].(int) / nums[1].(int)
-	}).WithArithmeticExtension("print", func(nums ...fp.Value) fp.Value {
+	}).WithArithmeticExtension("print", func(nums ...fp.Object) fp.Object {
 		for _, num := range nums {
 			fmt.Printf("%v ", num)
 		}
 		fmt.Println()
 		return len(nums)
-	}).WithArithmeticExtension("input", func(nums ...fp.Value) fp.Value {
+	}).WithArithmeticExtension("input", func(nums ...fp.Object) fp.Object {
 		var v int
 		_, err := fmt.Scanf("%d", &v)
 		if err != nil {
 			panic(err)
 		}
 		return v
-	}).WithArithmeticExtension("make_list", func(nums ...fp.Value) fp.Value {
-		var v []fp.Value
+	}).WithArithmeticExtension("make_list", func(nums ...fp.Object) fp.Object {
+		var v []fp.Object
 		for _, num := range nums {
 			v = append(v, num)
 		}
 		return v
-	}).WithArithmeticExtension("append_list", func(nums ...fp.Value) fp.Value {
-		return append(nums[0].([]fp.Value), nums[1:]...)
+	}).WithArithmeticExtension("append_list", func(nums ...fp.Object) fp.Object {
+		return append(nums[0].([]fp.Object), nums[1:]...)
 	})
 	for _, expr := range exprList {
 		r.Step(expr)

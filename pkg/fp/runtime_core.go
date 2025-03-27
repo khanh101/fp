@@ -7,20 +7,8 @@ import (
 
 const DETECT_NONPURE = true
 
-func (r *Runtime) WithExtension(name Name, f Extension) *Runtime {
-	r.extension[name] = f
-	return r
-}
-
-type Extension = func(r *Runtime, expr LambdaExpr) Value
-type Runtime struct {
-	Stack      []Frame
-	parseToken func(Token) (interface{}, error)
-	extension  map[Name]Extension
-}
-
-// Value : union of int, string, Lambda - TODO : introduce new data types
-type Value interface{}
+// Object : object union of int, string, Lambda - TODO : introduce new data types
+type Object interface{}
 type Lambda struct {
 	Params []Name
 	Impl   Expr
@@ -31,7 +19,7 @@ func (l Lambda) String() string {
 	return l.Impl.String()
 }
 
-type Frame map[Name]Value
+type Frame map[Name]Object
 
 func (f Frame) Update(otherFrame Frame) Frame {
 	for k, v := range otherFrame {
@@ -40,9 +28,21 @@ func (f Frame) Update(otherFrame Frame) Frame {
 	return f
 }
 
+type Extension = func(r *Runtime, expr LambdaExpr) Object
+type Runtime struct {
+	Stack      []Frame
+	parseToken func(Token) (interface{}, error)
+	extension  map[Name]Extension
+}
+
+func (r *Runtime) WithExtension(name Name, f Extension) *Runtime {
+	r.extension[name] = f
+	return r
+}
+
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
-func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Value {
+func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
 	o := &stepOption{
 		tailCallOptimization: false,
 	}
@@ -51,7 +51,7 @@ func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Value {
 	}
 	switch expr := expr.(type) {
 	case Name:
-		var v Value
+		var v Object
 		// parse token
 		v, err := r.parseToken(string(expr))
 		if err == nil {
@@ -81,7 +81,7 @@ func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Value {
 			return Lambda{}, false
 		}(); ok {
 			// 1. evaluate arguments
-			var args []Value
+			var args []Object
 			for _, arg := range expr.Args {
 				args = append(args, r.Step(arg))
 			}

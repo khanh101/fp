@@ -2,7 +2,7 @@ package fp
 
 import "strconv"
 
-// NewPlainRuntime - language specification
+// NewPlainRuntime - runtime + core control flow extensions
 func NewPlainRuntime() *Runtime {
 	return (&Runtime{
 		Stack: []Frame{
@@ -11,14 +11,14 @@ func NewPlainRuntime() *Runtime {
 		parseToken: func(expr string) (interface{}, error) {
 			return strconv.Atoi(expr)
 		},
-		extension: make(map[Name]func(r *Runtime, expr LambdaExpr) Value),
+		extension: make(map[Name]func(r *Runtime, expr LambdaExpr) Object),
 	}).
 		WithExtension("let", letExtension).
 		WithExtension("lambda", lambdaExtension).
 		WithExtension("case", caseExtension)
 }
 
-// NewBasicRuntime : minimal set of extensions for Turing completeness
+// NewBasicRuntime : NewPlainRuntime + minimal set of arithmetic extensions for Turing completeness
 func NewBasicRuntime() *Runtime {
 	return NewPlainRuntime().
 		WithArithmeticExtension("tail", tailArithmeticExtension).

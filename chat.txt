@@ -588,11 +588,12 @@ func Tokenize(str string) []Token {
 func ParseAll(tokenList []Token) ([]Expr, []Token) {
 	var expr Expr
 	var exprList []Expr
-	for {
-		if len(tokenList) == 0 || peak(tokenList) == ")" {
-			break
+	var endWithClose bool
+	for len(tokenList) > 0 {
+		expr, tokenList, endWithClose = parse(tokenList)
+		if endWithClose {
+			panicError("parse error")
 		}
-		expr, tokenList, _ = parse(tokenList)
 		exprList = append(exprList, expr)
 	}
 	return exprList, tokenList

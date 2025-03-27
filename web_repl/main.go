@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	"fp/pkg/fp"
 	"fp/pkg/repl"
-	"sort"
 	"strings"
 	"syscall/js"
 )

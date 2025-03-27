@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 rm -rf MANUAL.md
 touch MANUAL.md
-echo "\`\`\`" >> MANUAL.md
+echo "\`\`\`lisp" >> MANUAL.md
 go run cmd/man/main.go >> MANUAL.md 2>&1
 echo "\`\`\`" >> MANUAL.md
 ./export_to_chat > chat.txt

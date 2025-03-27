@@ -1,4 +1,4 @@
-```
+```lisp
 welcome to fp repl! type <function or module name> for help
 >>>add
 extension: (add 1 (add 2 3) 3) - exec a sequence of expressions and return the sum

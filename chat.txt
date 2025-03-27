@@ -222,16 +222,21 @@ func main() {
 		r.Step(expr)
 	}
 }
+./pkg/fp/runtime_option.go
+package fp
+
+type stepOption struct {
+	tailCallOptimization bool
+}
+
+func WithTailCallOptimization(o *stepOption) *stepOption {
+	o.tailCallOptimization = false // TODO - debug tailcall
+	return o
+}
 ./pkg/fp/runtime.go
 package fp
 
-import (
-	"fmt"
-	"os"
-	"strconv"
-)
-
-const DETECT_NONPURE = true
+import "strconv"
 
 // NewPlainRuntime - language specification
 func NewPlainRuntime() *Runtime {
@@ -313,6 +318,8 @@ func NewBasicRuntime() *Runtime {
 		return v
 	})
 }
+./pkg/fp/runtime_extension.go
+package fp
 
 func (r *Runtime) WithArithmeticExtension(name Name, f func(...Value) Value) *Runtime {
 	return r.WithExtension(name, func(r *Runtime, expr LambdaExpr) Value {
@@ -327,6 +334,117 @@ func (r *Runtime) WithArithmeticExtension(name Name, f func(...Value) Value) *Ru
 		return f(args...)
 	})
 }
+
+func letExtension(r *Runtime, expr LambdaExpr) LambdaExpr {
+	return LambdaExpr{}
+}
+./pkg/fp/ast.go
+package fp
+
+// Expr : union of Name, LambdaExpr
+type Expr interface {
+	String() string
+}
+
+type Name string
+
+func (e Name) String() string {
+	return string(e)
+}
+
+// LambdaExpr : S-expression
+type LambdaExpr struct {
+	Name Name
+	Args []Expr
+}
+
+func (e LambdaExpr) String() string {
+	s := ""
+	s += "("
+	s += e.Name.String()
+	for _, arg := range e.Args {
+		s += " " + arg.String()
+	}
+	s += ")"
+	return s
+}
+./pkg/fp/parser.go
+package fp
+
+import (
+	"strings"
+)
+
+type Token = string
+
+func pop(tokenList []Token) ([]Token, Token) {
+	return tokenList[1:], tokenList[0]
+}
+
+func peak(tokenList []Token) Token {
+	return tokenList[0]
+}
+
+func Tokenize(str string) []Token {
+	// remove comment
+	parts := strings.Split(str, "\n")
+	newParts := []string{}
+	for _, part := range parts {
+		newParts = append(newParts, strings.Split(part, "//")[0])
+	}
+
+	str = strings.Join(newParts, "\n")
+
+	str = strings.ReplaceAll(str, "\n", " ")
+	str = strings.ReplaceAll(str, "(", " ( ")
+	str = strings.ReplaceAll(str, ")", " ) ")
+
+	return strings.Fields(str)
+}
+
+func ParseAll(tokenList []Token) ([]Expr, []Token) {
+	var expr Expr
+	var exprList []Expr
+	for {
+		if len(tokenList) == 0 || peak(tokenList) == ")" {
+			break
+		}
+		expr, tokenList = parse(tokenList)
+		exprList = append(exprList, expr)
+	}
+	return exprList, tokenList
+}
+
+func parse(tokenList []Token) (Expr, []Token) {
+	if len(tokenList) == 0 {
+		return nil, nil
+	}
+	tokenList, head := pop(tokenList) // pop ( or [ or name
+	switch head {
+	case "(":
+		tokenList, funcName := pop(tokenList)
+		exprList, tokenList := ParseAll(tokenList)
+		tokenList, tail := pop(tokenList) // pop )
+		if tail != ")" {
+			panic("parse error")
+		}
+		return LambdaExpr{
+			Name: Name(funcName),
+			Args: exprList,
+		}, tokenList
+	default:
+		return Name(head), tokenList
+	}
+}
+./pkg/fp/runtime_core.go
+package fp
+
+import (
+	"fmt"
+	"os"
+)
+
+const DETECT_NONPURE = true
 
 func (r *Runtime) WithExtension(name Name, f func(r *Runtime, expr LambdaExpr) Value) *Runtime {
 	r.extension[name] = f
@@ -347,6 +465,10 @@ type Lambda struct {
 	Frame  Frame
 }
 
+func (l Lambda) String() string {
+	return l.Impl.String()
+}
+
 type Frame map[Name]Value
 
 func (f Frame) Update(otherFrame Frame) Frame {
@@ -354,15 +476,6 @@ func (f Frame) Update(otherFrame Frame) Frame {
 		f[k] = v
 	}
 	return f
-}
-
-type stepOption struct {
-	tailCallOptimization bool
-}
-
-func WithTailCallOptimization(o *stepOption) *stepOption {
-	o.tailCallOptimization = false // TODO - debug tailcall
-	return o
 }
 
 // Step - implement minimal set of instructions for the language to be Turing complete
@@ -442,86 +555,6 @@ func (r *Runtime) Step(expr Expr, stepOptions ...func(*stepOption) *stepOption) 
 
 	default:
 		panic("runtime error")
-	}
-	panic("runtime error")
-}
-./pkg/fp/ast.go
-package fp
-
-// Expr : union of Name, LambdaExpr
-type Expr interface{}
-
-type Name string
-type LambdaExpr struct {
-	Name Name
-	Args []Expr
-}
-./pkg/fp/parser.go
-package fp
-
-import (
-	"strings"
-)
-
-type Token = string
-
-func pop(tokenList []Token) ([]Token, Token) {
-	return tokenList[1:], tokenList[0]
-}
-
-func peak(tokenList []Token) Token {
-	return tokenList[0]
-}
-
-func Tokenize(str string) []Token {
-	// remove comment
-	parts := strings.Split(str, "\n")
-	newParts := []string{}
-	for _, part := range parts {
-		newParts = append(newParts, strings.Split(part, "//")[0])
-	}
-
-	str = strings.Join(newParts, "\n")
-
-	str = strings.ReplaceAll(str, "\n", " ")
-	str = strings.ReplaceAll(str, "(", " ( ")
-	str = strings.ReplaceAll(str, ")", " ) ")
-
-	return strings.Fields(str)
-}
-
-func ParseAll(tokenList []Token) ([]Expr, []Token) {
-	var expr Expr
-	var exprList []Expr
-	for {
-		if len(tokenList) == 0 || peak(tokenList) == ")" {
-			break
-		}
-		expr, tokenList = parse(tokenList)
-		exprList = append(exprList, expr)
-	}
-	return exprList, tokenList
-}
-
-func parse(tokenList []Token) (Expr, []Token) {
-	if len(tokenList) == 0 {
-		return nil, nil
-	}
-	tokenList, head := pop(tokenList) // pop ( or [ or name
-	switch head {
-	case "(":
-		tokenList, funcName := pop(tokenList)
-		exprList, tokenList := ParseAll(tokenList)
-		tokenList, tail := pop(tokenList) // pop )
-		if tail != ")" {
-			panic("parse error")
-		}
-		return LambdaExpr{
-			Name: Name(funcName),
-			Args: exprList,
-		}, tokenList
-	default:
-		return Name(head), tokenList
 	}
 }
 do you have any comment on this?

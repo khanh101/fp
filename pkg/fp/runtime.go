@@ -8,14 +8,13 @@ import (
 
 const DETECT_NONPURE = true
 
-func NewRuntime() *Runtime {
+func NewBasicRuntime() *Runtime {
 	return (&Runtime{
 		Stack: []Frame{
 			make(Frame),
 		},
-		systemExtension: make(map[Name]func(r *Runtime, expr LambdaExpr) Value),
-		userExtension:   make(map[Name]func(...Value) Value),
-	}).WithSystemExtension("let", func(r *Runtime, expr LambdaExpr) Value {
+		extension: make(map[Name]func(r *Runtime, expr LambdaExpr) Value),
+	}).WithExtension("let", func(r *Runtime, expr LambdaExpr) Value {
 		name := expr.Args[0].(Name)
 		var v Value
 		for i := 1; i < len(expr.Args); i++ {
@@ -27,7 +26,7 @@ func NewRuntime() *Runtime {
 		}
 		r.Stack[len(r.Stack)-1][name] = v
 		return v
-	}).WithSystemExtension("lambda", func(r *Runtime, expr LambdaExpr) Value {
+	}).WithExtension("lambda", func(r *Runtime, expr LambdaExpr) Value {
 		v := Lambda{
 			Params: nil,
 			Impl:   nil,
@@ -40,7 +39,7 @@ func NewRuntime() *Runtime {
 		v.Impl = expr.Args[len(expr.Args)-1]
 		v.Frame = make(Frame).Update(r.Stack[len(r.Stack)-1])
 		return v
-	}).WithSystemExtension("case", func(r *Runtime, expr LambdaExpr) Value {
+	}).WithExtension("case", func(r *Runtime, expr LambdaExpr) Value {
 		cond := r.Step(expr.Args[0])
 		i := func() int {
 			for i := 1; i < len(expr.Args); i += 2 {
@@ -54,7 +53,7 @@ func NewRuntime() *Runtime {
 			panic("runtime error")
 		}()
 		return r.Step(expr.Args[i+1], WithTailCallOptimization)
-	}).WithSystemExtension("sign", func(r *Runtime, expr LambdaExpr) Value {
+	}).WithExtension("sign", func(r *Runtime, expr LambdaExpr) Value {
 		v := r.Step(expr.Args[0], WithTailCallOptimization).(int)
 		switch {
 		case v > 0:
@@ -65,11 +64,11 @@ func NewRuntime() *Runtime {
 			return 0
 		}
 		panic("runtime error")
-	}).WithSystemExtension("sub", func(r *Runtime, expr LambdaExpr) Value {
+	}).WithExtension("sub", func(r *Runtime, expr LambdaExpr) Value {
 		a := r.Step(expr.Args[0]).(int)
 		b := r.Step(expr.Args[1], WithTailCallOptimization).(int)
 		return a - b
-	}).WithSystemExtension("add", func(r *Runtime, expr LambdaExpr) Value {
+	}).WithExtension("add", func(r *Runtime, expr LambdaExpr) Value {
 		var v int
 		for i := 0; i < len(expr.Args); i++ {
 			if i == len(expr.Args)-1 {
@@ -79,7 +78,7 @@ func NewRuntime() *Runtime {
 			}
 		}
 		return v
-	}).WithSystemExtension("tail", func(r *Runtime, expr LambdaExpr) Value {
+	}).WithExtension("tail", func(r *Runtime, expr LambdaExpr) Value {
 		var v Value
 		for i := 0; i < len(expr.Args); i++ {
 			if i == len(expr.Args)-1 {
@@ -92,20 +91,28 @@ func NewRuntime() *Runtime {
 	})
 }
 
-func (r *Runtime) WithExtension(name Name, f func(...Value) Value) *Runtime {
-	r.userExtension[name] = f
-	return r
+func (r *Runtime) WithArithmeticExtension(name Name, f func(...Value) Value) *Runtime {
+	return r.WithExtension(name, func(r *Runtime, expr LambdaExpr) Value {
+		var args []Value
+		for i := 0; i < len(expr.Args); i++ {
+			if i == len(expr.Args)-1 {
+				args = append(args, r.Step(expr.Args[i], WithTailCallOptimization))
+			} else {
+				args = append(args, r.Step(expr.Args[i]))
+			}
+		}
+		return f(args...)
+	})
 }
 
-func (r *Runtime) WithSystemExtension(name Name, f func(r *Runtime, expr LambdaExpr) Value) *Runtime {
-	r.systemExtension[name] = f
+func (r *Runtime) WithExtension(name Name, f func(r *Runtime, expr LambdaExpr) Value) *Runtime {
+	r.extension[name] = f
 	return r
 }
 
 type Runtime struct {
-	Stack           []Frame
-	systemExtension map[Name]func(r *Runtime, expr LambdaExpr) Value
-	userExtension   map[Name]func(...Value) Value
+	Stack     []Frame
+	extension map[Name]func(r *Runtime, expr LambdaExpr) Value
 }
 
 // Value : union of int, string, Lambda - TODO : introduce new data types
@@ -203,16 +210,8 @@ func (r *Runtime) Step(expr Expr, stepOptions ...func(*stepOption) *stepOption) 
 			}
 			return v
 		}
-		// check for userExtension
-		if f, ok := r.userExtension[expr.Name]; ok {
-			var args []Value
-			for _, arg := range expr.Args {
-				args = append(args, r.Step(arg))
-			}
-			return f(args...)
-		}
-		// check for systemExtension
-		if f, ok := r.systemExtension[expr.Name]; ok {
+		// check for extension
+		if f, ok := r.extension[expr.Name]; ok {
 			return f(r, expr)
 		}
 	default:

@@ -7,40 +7,24 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strings"
 	"syscall"
 )
 
-func write(format string, args ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stderr, format, args...)
-	_ = os.Stderr.Sync() // flush
-}
+func repl(web bool) (output string, repl func(input string) (output string), clear func() (output string)) {
+	r := fp.NewStdRuntime()
+	buffer := ""
+	write := func(format string, a ...interface{}) {
+		s := fmt.Sprintf(format, a...)
+		if web {
+			strings.ReplaceAll(s, "\n", "<br>")
+		}
+		buffer += s
+	}
+	writeln := func(s string) {
+		write(s + "\n")
+	}
 
-func writeln(format string, args ...interface{}) {
-	write(format+"\n", args...)
-}
-
-func main() {
-	r := fp.NewStdRuntime().
-		LoadExtension("div", fp.Extension{
-			Exec: func(value ...fp.Object) (fp.Object, error) {
-				if len(value) != 2 {
-					return nil, fmt.Errorf("subtract requires 2 arguments")
-				}
-				a, ok := value[0].(int)
-				if !ok {
-					return nil, fmt.Errorf("subtract non-integer value")
-				}
-				b, ok := value[0].(int)
-				if !ok {
-					return nil, fmt.Errorf("subtract non-integer value")
-				}
-				if b == 0 {
-					return nil, fmt.Errorf("division by zero")
-				}
-				return a / b, nil
-			},
-			Man: "extension: division",
-		})
 	writeln("welcome to fp repl! type <function or module name> for help")
 	write("loaded modules: ")
 	var funcNameList []string
@@ -52,23 +36,12 @@ func main() {
 		write("%s ", name)
 	}
 	writeln("")
-
-	signCh := make(chan os.Signal, 1)
-	signal.Notify(signCh, syscall.SIGINT, syscall.SIGTERM)
-
+	write(">>>")
 	parser := &fp.Parser{}
 
-	scanner := bufio.NewScanner(os.Stdin)
-	write(">>>")
-	for scanner.Scan() {
-		select {
-		case <-signCh:
-			parser.Clear()
-			writeln(">>> (Control + C) to clear buffer, (Control + D) to exit")
-			writeln(">>>")
-		default:
-			line := scanner.Text()
-			tokenList := fp.Tokenize(line)
+	output, buffer = buffer, ""
+	return output, func(input string) (output string) {
+			tokenList := fp.Tokenize(input)
 			executed := false
 			if len(tokenList) == 0 {
 				executed = true
@@ -89,8 +62,40 @@ func main() {
 			if executed {
 				write(">>>")
 			}
+			output, buffer = buffer, ""
+			return output
+		}, func() (output string) {
+			parser.Clear()
+			writeln(">>> (Control + C) to clear buffer, (Control + D) to exit")
+			writeln(">>>")
+			output, buffer = buffer, ""
+			return output
 		}
+}
 
+func main() {
+	output, repl, clearBuffer := repl(false)
+	fmt.Printf(output)
+
+	signCh := make(chan os.Signal, 1)
+	signal.Notify(signCh, syscall.SIGINT, syscall.SIGTERM)
+
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		select {
+		case s := <-signCh:
+			switch s {
+			case syscall.SIGINT:
+				output := clearBuffer()
+				fmt.Printf(output)
+			case syscall.SIGTERM:
+				os.Exit(0)
+			}
+		default:
+			input := scanner.Text()
+			output := repl(input)
+			fmt.Printf(output)
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		panic(err)

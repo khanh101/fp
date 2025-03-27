@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python-like REPL in Go</title>
+    <script src="wasm_exec.js"></script>
+    </head>
+<body>
+
+<div id="repl-container">
+    <div id="output"></div>
+    <div class="input-line">
+        <span id="prompt">>>> </span>
+        <textarea id="input" autofocus autocomplete="off"></textarea>
+        <span class="cursor"></span>
+    </div>
+    <button id="copy-button">Copy All</button>
+</div>
+
+<script>
+    if (WebAssembly) {
+        const go = new Go();
+        WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
+            go.run(result.instance);
+        });
+    } else {
+        console.log("WebAssembly is not supported in your browser");
+    }
+
+    const outputEl = document.getElementById("output");
+    const inputEl = document.getElementById("input");
+    const copyButton = document.getElementById("copy-button");
+    let history = [];
+    let historyIndex = -1;
+
+    function runREPL() {
+        const input = inputEl.value.trim();
+        if (!input) return;
+
+        history.push(input);
+        historyIndex = history.length;
+
+        // Call the Go function to evaluate input
+        const result = window.evaluate(input);
+
+        // Display input and result in the output div
+        outputEl.innerHTML += `<div>>>> ${input}</div><div>${result}</div>`;
+        outputEl.scrollTop = outputEl.scrollHeight;
+
+        inputEl.value = "";
+        inputEl.style.height = "25px"; // Reset textarea height after each input
+    }
+
+    // Copy all output to clipboard
+    copyButton.addEventListener("click", () => {
+        const range = document.createRange();
+        range.selectNodeContents(outputEl);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        document.execCommand('copy');
+    });
+
+    inputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();  // Prevent default Enter behavior (new line)
+            runREPL();           // Trigger REPL evaluation
+        } else if (e.key === "Enter" && e.shiftKey) {
+            // Allow multi-line input (adjust height)
+            inputEl.style.height = inputEl.scrollHeight + "px";
+        } else if (e.key === "ArrowUp" && history.length > 0) {
+            historyIndex = Math.max(0, historyIndex - 1);
+            inputEl.value = history[historyIndex];
+        } else if (e.key === "ArrowDown") {
+            historyIndex = Math.min(history.length, historyIndex + 1);
+            inputEl.value = history[historyIndex] || "";
+        }
+    });
+</script>
+
+</body>
+</html>

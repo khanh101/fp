@@ -26,6 +26,10 @@ in the code below, i gave an example with `(let x_v (print 2 5))` and `(func x_f
 
 higher-order function is already implemented
 
+## Tail call optimization
+
+WIP
+
 ## Performance improvement
 
 if we assume functions are pure, one can consider the whole program as a set of expressions (with some dependencies of `let`)

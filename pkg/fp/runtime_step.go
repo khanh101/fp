@@ -12,14 +12,14 @@ type stepOption struct {
 
 func TCOStepOption(tco bool) StepOption {
 	return func(o *stepOption) *stepOption {
-		o.tailCallOptimization = false // TODO - debug tailcall
+		o.tailCallOptimization = false // TODO - debug tail call optimization
 		return o
 	}
 }
 
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
-func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
+func (r *Runtime) Step(expr Expr, opts ...StepOption) Object {
 	if r.debug {
 		defer func() {
 			logDebug("%v\n", r)
@@ -28,7 +28,7 @@ func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
 	o := &stepOption{
 		tailCallOptimization: false,
 	}
-	for _, opt := range stepOptions {
+	for _, opt := range opts {
 		if opt == nil {
 			continue
 		}

@@ -48,5 +48,6 @@ func main() {
 	})
 	for _, expr := range exprList {
 		r.Step(expr)
+		fmt.Println(r)
 	}
 }

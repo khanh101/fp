@@ -12,6 +12,6 @@ func defaultStepOption() *stepOption {
 }
 
 func WithTailCallOptimization(o *stepOption) *stepOption {
-	o.tailCallOptimization = false // TODO - debug tailcall
+	o.tailCallOptimization = true // TODO - debug tailcall
 	return o
 }

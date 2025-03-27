@@ -35,6 +35,17 @@ type Runtime struct {
 	extension  map[Name]Extension
 }
 
+func (r *Runtime) String() string {
+	s := ""
+	for _, f := range r.Stack {
+		for k, v := range f {
+			s += fmt.Sprintf("%s -> %v,", k, v)
+		}
+		s += "|"
+	}
+	return s
+}
+
 func (r *Runtime) WithExtension(name Name, f Extension) *Runtime {
 	r.extension[name] = f
 	return r
@@ -45,6 +56,9 @@ func (r *Runtime) WithExtension(name Name, f Extension) *Runtime {
 func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
 	o := defaultStepOption()
 	for _, opt := range stepOptions {
+		if opt == nil {
+			continue
+		}
 		o = opt(o)
 	}
 	switch expr := expr.(type) {
@@ -55,7 +69,7 @@ func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
 		if err == nil {
 			return v
 		}
-		// find in stack
+		// find in stack for variable
 		for i := len(r.Stack) - 1; i >= 0; i-- {
 			if v, ok := r.Stack[i][expr]; ok {
 				if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
@@ -66,7 +80,7 @@ func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
 		}
 		panicError("runtime error: variable %s not found", expr.String())
 	case LambdaExpr:
-		// check for user-defined function
+		// find in stack for user-defined function
 		if f, ok := func() (Lambda, bool) {
 			// 1. get func recursively
 			for i := len(r.Stack) - 1; i >= 0; i-- {
@@ -80,12 +94,9 @@ func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
 			return Lambda{}, false
 		}(); ok {
 			// 1. evaluate arguments
-			var args []Object
-			for _, arg := range expr.Args {
-				args = append(args, r.Step(arg))
-			}
+			args := r.stepWithTailOption(nil, expr.Args...)
 			if o.tailCallOptimization {
-				// tail call - use last frame
+				// 2. reuse last frame
 				for i := 0; i < len(f.Params); i++ {
 					r.Stack[len(r.Stack)-1][f.Params[i]] = args[i]
 				}
@@ -118,4 +129,15 @@ func (r *Runtime) Step(expr Expr, stepOptions ...StepOption) Object {
 	}
 	panicError("unreachable")
 	return nil
+}
+
+func (r *Runtime) stepWithTailOption(opt StepOption, exprList ...Expr) []Object {
+	var outputs []Object
+	if len(exprList) > 0 {
+		for i := 0; i < len(exprList)-1; i++ {
+			outputs = append(outputs, r.Step(exprList[i]))
+		}
+		outputs = append(outputs, r.Step(exprList[len(exprList)-1], opt))
+	}
+	return outputs
 }

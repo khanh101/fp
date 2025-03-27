@@ -3,14 +3,7 @@ package fp
 type ArithmeticExtension = func(...Object) Object
 
 func (r *Runtime) stepWithTailCallOptimization(exprList ...Expr) []Object {
-	var outputs []Object
-	for i := 0; i < len(exprList)-1; i++ {
-		outputs = append(outputs, r.Step(exprList[i]))
-	}
-	if len(exprList) > 0 {
-		outputs = append(outputs, r.Step(exprList[len(exprList)-1], WithTailCallOptimization))
-	}
-	return outputs
+	return r.stepWithTailOption(WithTailCallOptimization, exprList...)
 }
 
 func (r *Runtime) WithArithmeticExtension(name Name, f ArithmeticExtension) *Runtime {

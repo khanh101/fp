@@ -14,6 +14,7 @@ func pop(tokenList []Token) ([]Token, Token, error) {
 	return tokenList[1:], tokenList[0], nil
 }
 
+// Tokenize : TODO add handling double quotes for string
 func Tokenize(str string) []Token {
 	// remove comment
 	parts := strings.Split(str, "\n")

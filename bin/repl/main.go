@@ -17,7 +17,7 @@ func writeln(format string, args ...interface{}) {
 }
 
 func main() {
-	r := fp.NewBasicRuntime().
+	r := fp.NewDebugRuntime().
 		WithArithmeticExtension("print", func(nums ...fp.Object) (fp.Object, error) {
 			for _, num := range nums {
 				fmt.Printf("%v ", num)
@@ -41,19 +41,9 @@ func main() {
 				return nil, fmt.Errorf("division by zero")
 			}
 			return a - b, nil
-		}).
-		WithArithmeticExtension("make_list", func(nums ...fp.Object) (fp.Object, error) {
-			var v []fp.Object
-			for _, num := range nums {
-				v = append(v, num)
-			}
-			return v, nil
-		}).
-		WithArithmeticExtension("append_list", func(nums ...fp.Object) (fp.Object, error) {
-			return append(nums[0].([]fp.Object), nums[1:]...), nil
 		})
 	writeln("welcome to fp repl! ")
-	fmt.Printf("loaded modules: ")
+	write("loaded modules: ")
 	for k, _ := range r.Module {
 		write("%v ", k)
 	}

@@ -1,7 +1,6 @@
 package fp
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -21,20 +20,33 @@ func (r *Runtime) WithArithmeticExtension(name Name, f ArithmeticExtension) *Run
 	})
 }
 
-func letExtension(r *Runtime, expr LambdaExpr) (Object, error) {
+func letModule(r *Runtime, expr LambdaExpr) (Object, error) {
+	if len(expr.Args) < 2 {
+		return nil, fmt.Errorf("not enough arguments for let")
+	}
 	name := expr.Args[0].(Name)
 	outputs, err := r.stepWithTailCallOptimization(expr.Args[1:]...)
 	if err != nil {
 		return nil, err
 	}
-	if len(outputs) == 0 {
-		return nil, errors.New("let of nothing")
-	}
 	r.Stack[len(r.Stack)-1][name] = outputs[len(outputs)-1]
-	return 0, nil
+	return outputs[len(outputs)-1], nil
 }
 
-func lambdaExtension(r *Runtime, expr LambdaExpr) (Object, error) {
+func delModule(r *Runtime, expr LambdaExpr) (Object, error) {
+	if len(expr.Args) < 1 {
+		return nil, fmt.Errorf("not enough arguments for del")
+	}
+	name := expr.Args[0].(Name)
+	_, err := r.stepWithTailCallOptimization(expr.Args[1:]...)
+	if err != nil {
+		return nil, err
+	}
+	delete(r.Stack[len(r.Stack)-1], name)
+	return nil, nil
+}
+
+func lambdaModule(r *Runtime, expr LambdaExpr) (Object, error) {
 	v := Lambda{
 		Params: nil,
 		Impl:   nil,
@@ -49,7 +61,7 @@ func lambdaExtension(r *Runtime, expr LambdaExpr) (Object, error) {
 	return v, nil
 }
 
-func caseExtension(r *Runtime, expr LambdaExpr) (Object, error) {
+func caseModule(r *Runtime, expr LambdaExpr) (Object, error) {
 	cond, err := r.Step(expr.Args[0])
 	if err != nil {
 		return nil, err
@@ -75,7 +87,7 @@ func caseExtension(r *Runtime, expr LambdaExpr) (Object, error) {
 	return r.Step(expr.Args[i+1], TCOStepOption(true))
 }
 
-func resetExtension(r *Runtime, expr LambdaExpr) (Object, error) {
+func resetModule(r *Runtime, expr LambdaExpr) (Object, error) {
 	r.Stack = []Frame{
 		make(Frame),
 	}
@@ -126,4 +138,76 @@ func signArithmeticExtension(value ...Object) (Object, error) {
 	default:
 		return 0, nil
 	}
+}
+
+func listArithmeticExtension(value ...Object) (Object, error) {
+	var l []Object
+	for _, v := range value {
+		l = append(l, v)
+	}
+	return l, nil
+}
+
+func appendArithmeticExtension(value ...Object) (Object, error) {
+	l, ok := value[0].([]Object)
+	if !ok {
+		return nil, fmt.Errorf("first argument must be list")
+	}
+	return append(l, value[1:]...), nil
+}
+
+func sliceArithmeticExtension(value ...Object) (Object, error) {
+	if len(value) != 3 {
+		return nil, fmt.Errorf("slice requires 3 arguments")
+	}
+	l, ok := value[0].([]Object)
+	if !ok {
+		return nil, fmt.Errorf("first argument must be list")
+	}
+	if len(l) < 1 {
+		return nil, fmt.Errorf("empty list")
+	}
+	i, ok := value[1].(int)
+	if !ok {
+		return nil, fmt.Errorf("second argument must be integer")
+	}
+	j, ok := value[2].(int)
+	if !ok {
+		return nil, fmt.Errorf("third argument must be integer")
+	}
+	return l[i:j], nil
+}
+
+func peakArithmeticExtension(value ...Object) (Object, error) {
+	if len(value) != 2 {
+		return nil, fmt.Errorf("peak requires 2 arguments")
+	}
+	l, ok := value[0].([]Object)
+	if !ok {
+		return nil, fmt.Errorf("first argument must be list")
+	}
+	if len(l) < 1 {
+		return nil, fmt.Errorf("empty list")
+	}
+	i, ok := value[1].(int)
+	if !ok {
+		return nil, fmt.Errorf("second argument must be integer")
+	}
+	return l[i], nil
+}
+
+func stackModule(r *Runtime, expr LambdaExpr) (Object, error) {
+	_, err := r.stepWithTailCallOptimization(expr.Args...)
+	if err != nil {
+		return nil, err
+	}
+	return r.Stack, nil
+}
+
+func moduleModule(r *Runtime, expr LambdaExpr) (Object, error) {
+	_, err := r.stepWithTailCallOptimization(expr.Args...)
+	if err != nil {
+		return nil, err
+	}
+	return r.Module, nil
 }

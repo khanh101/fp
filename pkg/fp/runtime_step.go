@@ -20,11 +20,6 @@ func TCOStepOption(tco bool) StepOption {
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
 func (r *Runtime) Step(expr Expr, opts ...StepOption) (Object, error) {
-	if r.debug {
-		defer func() {
-			logDebug("%v\n", r)
-		}()
-	}
 	o := &stepOption{
 		tailCallOptimization: false,
 	}
@@ -102,9 +97,9 @@ func (r *Runtime) Step(expr Expr, opts ...StepOption) (Object, error) {
 		if f, ok := r.Module[expr.Name]; ok {
 			return f(r, expr)
 		}
-		panicError("runtime error: function %s not found", expr.Name.String())
+		return nil, fmt.Errorf("runtime error: function %s not found", expr.Name.String())
 	default:
-		panicError("runtime error: unknown expression type")
+		return nil, fmt.Errorf("runtime error: unknown expression type")
 	}
 	return nil, fmt.Errorf("unreachable")
 }

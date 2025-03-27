@@ -9,9 +9,9 @@ const DETECT_NONPURE = true
 // Object : object union of int, string, Lambda - TODO : introduce new data types
 type Object interface{}
 type Lambda struct {
-	Params []Name
-	Impl   Expr
-	Frame  Frame
+	Params []Name `json:"params,omitempty"`
+	Impl   Expr   `json:"impl,omitempty"`
+	Frame  Frame  `json:"frame,omitempty"`
 }
 
 func (l Lambda) String() string {
@@ -29,10 +29,9 @@ func (f Frame) Update(otherFrame Frame) Frame {
 
 type Module = func(r *Runtime, expr LambdaExpr) (Object, error)
 type Runtime struct {
-	debug        bool
 	parseLiteral func(lit Name) (Object, error)
-	Stack        []Frame
-	Module       map[Name]Module
+	Stack        []Frame         `json:"stack,omitempty"`
+	Module       map[Name]Module `json:"module,omitempty"`
 }
 
 func (r *Runtime) String() string {
@@ -58,10 +57,5 @@ func (r *Runtime) LoadModule(name Name, f Module) *Runtime {
 
 func (r *Runtime) LoadParseLiteral(f func(lit Name) (Object, error)) *Runtime {
 	r.parseLiteral = f
-	return r
-}
-
-func (r *Runtime) SetDebug(debug bool) *Runtime {
-	r.debug = debug
 	return r
 }

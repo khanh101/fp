@@ -41,7 +41,7 @@ func main() {
 			},
 			Man: "extension: division",
 		})
-	writeln("welcome to fp repl! type (man <function or module name>) for help")
+	writeln("welcome to fp repl! type <function or module name> for help")
 	write("loaded modules: ")
 	var funcNameList []string
 	for k := range r.Stack[0] {

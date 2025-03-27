@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-go run bin/repl/main.go
+go run cmd/repl/main.go

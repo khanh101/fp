@@ -42,30 +42,9 @@ each function call only need its own variable scope, they can execute every expr
 
 no 😅
 
-## language specs
+## MANUAL 
 
-_out-dated, refer to `pkg/fp/runtime.go` for latest_
-
-- program : a list of expression
-- name and expression: name is a string of characters, e.g. `x`, `mul`, and expression is enclosed with parentheses starting with a name, e.g `(let x 3)`, `(add 1 2)`
-- evaluation: in run time, name and expression have an associated value
-    - name is evaluated using a pool of variables; in code, it is `sttack`. if a name is not of a variable name declared using `let` or `input`, it is undefined behavior
-    - expression is evaluated using its name
-
-- builtin functions: ` let, lambda, case, sign, sub, add, tail`
-```
-(let <name> <expr>)                                          - assign value of <expr> into local variable <name>
-(lambda <name_1> ... <name_n> <expr>)                        - declare an anonymous function
-(case <cond> <expr_1> <expr_2>... <key_{n-1}> <expr_n>)      - branching, if <cond> = <key_i> for i odd, return <expr_{i+1}>
-(sign <expr>)                                                - return (-1), 0, (+1) according to sign of <expr>
-(add <expr_1> ... <expr_n>)                                  - add
-(sub <expr_1> <expr_2>)                                      - subtract
-(tail <expr_1> ... <expr_n>)                                 - evaluate all expressions then return the last one
-                                                               (use to declare local variables, do multistep calculation)
-```
-
-- extension functions: `div, print, input, make_list, append_list`
-
+- for builtin modules, extensions, see `MANUAL`
 - wildcard symbol: `_` is a special symbol used in `case` to mark every other cases
 - no match is `case` is an undefined behavior
 

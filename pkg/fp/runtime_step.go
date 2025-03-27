@@ -5,30 +5,9 @@ import (
 	"os"
 )
 
-type StepOption func(*stepOption) *stepOption
-type stepOption struct {
-	tailCallOptimization bool
-}
-
-func TCOStepOption(tco bool) StepOption {
-	return func(o *stepOption) *stepOption {
-		o.tailCallOptimization = false // TODO - debug tail call optimization
-		return o
-	}
-}
-
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
-func (r *Runtime) Step(expr Expr, opts ...StepOption) (Object, error) {
-	o := &stepOption{
-		tailCallOptimization: false,
-	}
-	for _, opt := range opts {
-		if opt == nil {
-			continue
-		}
-		o = opt(o)
-	}
+func (r *Runtime) Step(expr Expr) (Object, error) {
 	switch expr := expr.(type) {
 	case Name:
 		var v Object
@@ -70,35 +49,24 @@ func (r *Runtime) Step(expr Expr, opts ...StepOption) (Object, error) {
 		}
 		if ok {
 			// 1. evaluate arguments
-			args, err := r.stepWithTailOption(nil, expr.Args...)
+			args, err := r.stepMany(expr.Args...)
 			if err != nil {
 				return nil, err
 			}
-			if o.tailCallOptimization {
-				// 2. reuse last frame
-				for i := 0; i < len(f.Params); i++ {
-					r.Stack[len(r.Stack)-1][f.Params[i]] = args[i]
-				}
-			} else {
-				// 2. add argument to local Frame
-				localFrame := make(Frame).Update(f.Frame)
-				for i := 0; i < len(f.Params); i++ {
-					localFrame[f.Params[i]] = args[i]
-				}
-				// 3. push Frame to Stack
-				r.Stack = append(r.Stack, localFrame)
+			// 2. add argument to local Frame
+			localFrame := make(Frame).Update(f.Frame)
+			for i := 0; i < len(f.Params); i++ {
+				localFrame[f.Params[i]] = args[i]
 			}
+			// 3. push Frame to Stack
+			r.Stack = append(r.Stack, localFrame)
 			// 4. exec function
 			v, err := r.Step(f.Impl)
 			if err != nil {
 				return nil, err
 			}
-			if o.tailCallOptimization {
-				// pass
-			} else {
-				// 5. pop Frame from Stack
-				r.Stack = r.Stack[:len(r.Stack)-1]
-			}
+			// 5. pop Frame from Stack
+			r.Stack = r.Stack[:len(r.Stack)-1]
 			return v, nil
 		}
 		// check for Module
@@ -109,24 +77,16 @@ func (r *Runtime) Step(expr Expr, opts ...StepOption) (Object, error) {
 	default:
 		return nil, fmt.Errorf("runtime error: unknown expression type")
 	}
-	return nil, fmt.Errorf("unreachable")
 }
 
-func (r *Runtime) stepWithTailOption(opt StepOption, exprList ...Expr) ([]Object, error) {
+func (r *Runtime) stepMany(exprList ...Expr) ([]Object, error) {
 	var outputs []Object
-	if len(exprList) > 0 {
-		for i := 0; i < len(exprList)-1; i++ {
-			output, err := r.Step(exprList[i])
-			if err != nil {
-				return nil, err
-			}
-			outputs = append(outputs, output)
-		}
-		output, err := r.Step(exprList[len(exprList)-1], opt)
+	for _, expr := range exprList {
+		v, err := r.Step(expr)
 		if err != nil {
 			return nil, err
 		}
-		outputs = append(outputs, output)
+		outputs = append(outputs, v)
 	}
 	return outputs, nil
 }

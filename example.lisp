@@ -67,19 +67,11 @@
 (let add3 (addx t))                                     // partial function
 (print (add3 14) 9)
 
-// dict example
-(let d (dict_new))                                      // new dict
-(let d (dict_set d 2 300))                                 // set value
-(let d (dict_set d 3 500))                                 // set value
-(let d (dict_set d 2 200))                                 // set value
-(print (dict_get d 2) 11)                                 // should print 200
-
-// end dict example
 
 (print (div 6 2))                                      // test extension
 
-(let l (make_list 1 2 3 5 -7))                        // test list
-(let l (append_list l 6))
+(let l (list 1 2 3 5 -7))                        // test list
+(let l (append l 6))
 (print l)
 
 

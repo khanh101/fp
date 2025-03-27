@@ -6,13 +6,9 @@ import (
 
 type ArithmeticExtension = func(...Object) (Object, error)
 
-func (r *Runtime) stepWithTailCallOptimization(exprList ...Expr) ([]Object, error) {
-	return r.stepWithTailOption(TCOStepOption(true), exprList...)
-}
-
 func (r *Runtime) WithArithmeticExtension(name Name, f ArithmeticExtension) *Runtime {
 	return r.LoadModule(name, func(r *Runtime, expr LambdaExpr) (Object, error) {
-		args, err := r.stepWithTailCallOptimization(expr.Args...)
+		args, err := r.stepMany(expr.Args...)
 		if err != nil {
 			return nil, err
 		}
@@ -25,7 +21,7 @@ func letModule(r *Runtime, expr LambdaExpr) (Object, error) {
 		return nil, fmt.Errorf("not enough arguments for let")
 	}
 	name := expr.Args[0].(Name)
-	outputs, err := r.stepWithTailCallOptimization(expr.Args[1:]...)
+	outputs, err := r.stepMany(expr.Args[1:]...)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +34,7 @@ func delModule(r *Runtime, expr LambdaExpr) (Object, error) {
 		return nil, fmt.Errorf("not enough arguments for del")
 	}
 	name := expr.Args[0].(Name)
-	_, err := r.stepWithTailCallOptimization(expr.Args[1:]...)
+	_, err := r.stepMany(expr.Args[1:]...)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +80,7 @@ func caseModule(r *Runtime, expr LambdaExpr) (Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	return r.Step(expr.Args[i+1], TCOStepOption(true))
+	return r.Step(expr.Args[i+1])
 }
 
 func resetModule(r *Runtime, expr LambdaExpr) (Object, error) {
@@ -199,7 +195,7 @@ func peakArithmeticExtension(value ...Object) (Object, error) {
 // TODO - implement map filter reduce
 
 func stackModule(r *Runtime, expr LambdaExpr) (Object, error) {
-	_, err := r.stepWithTailCallOptimization(expr.Args...)
+	_, err := r.stepMany(expr.Args...)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +203,7 @@ func stackModule(r *Runtime, expr LambdaExpr) (Object, error) {
 }
 
 func moduleModule(r *Runtime, expr LambdaExpr) (Object, error) {
-	_, err := r.stepWithTailCallOptimization(expr.Args...)
+	_, err := r.stepMany(expr.Args...)
 	if err != nil {
 		return nil, err
 	}

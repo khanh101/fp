@@ -280,30 +280,9 @@ import (
 	"os"
 )
 
-type StepOption func(*stepOption) *stepOption
-type stepOption struct {
-	tailCallOptimization bool
-}
-
-func TCOStepOption(tco bool) StepOption {
-	return func(o *stepOption) *stepOption {
-		o.tailCallOptimization = false // TODO - debug tail call optimization
-		return o
-	}
-}
-
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
-func (r *Runtime) Step(expr Expr, opts ...StepOption) (Object, error) {
-	o := &stepOption{
-		tailCallOptimization: false,
-	}
-	for _, opt := range opts {
-		if opt == nil {
-			continue
-		}
-		o = opt(o)
-	}
+func (r *Runtime) Step(expr Expr) (Object, error) {
 	switch expr := expr.(type) {
 	case Name:
 		var v Object
@@ -345,35 +324,24 @@ func (r *Runtime) Step(expr Expr, opts ...StepOption) (Object, error) {
 		}
 		if ok {
 			// 1. evaluate arguments
-			args, err := r.stepWithTailOption(nil, expr.Args...)
+			args, err := r.stepMany(expr.Args...)
 			if err != nil {
 				return nil, err
 			}
-			if o.tailCallOptimization {
-				// 2. reuse last frame
-				for i := 0; i < len(f.Params); i++ {
-					r.Stack[len(r.Stack)-1][f.Params[i]] = args[i]
-				}
-			} else {
-				// 2. add argument to local Frame
-				localFrame := make(Frame).Update(f.Frame)
-				for i := 0; i < len(f.Params); i++ {
-					localFrame[f.Params[i]] = args[i]
-				}
-				// 3. push Frame to Stack
-				r.Stack = append(r.Stack, localFrame)
+			// 2. add argument to local Frame
+			localFrame := make(Frame).Update(f.Frame)
+			for i := 0; i < len(f.Params); i++ {
+				localFrame[f.Params[i]] = args[i]
 			}
+			// 3. push Frame to Stack
+			r.Stack = append(r.Stack, localFrame)
 			// 4. exec function
 			v, err := r.Step(f.Impl)
 			if err != nil {
 				return nil, err
 			}
-			if o.tailCallOptimization {
-				// pass
-			} else {
-				// 5. pop Frame from Stack
-				r.Stack = r.Stack[:len(r.Stack)-1]
-			}
+			// 5. pop Frame from Stack
+			r.Stack = r.Stack[:len(r.Stack)-1]
 			return v, nil
 		}
 		// check for Module
@@ -384,24 +352,16 @@ func (r *Runtime) Step(expr Expr, opts ...StepOption) (Object, error) {
 	default:
 		return nil, fmt.Errorf("runtime error: unknown expression type")
 	}
-	return nil, fmt.Errorf("unreachable")
 }
 
-func (r *Runtime) stepWithTailOption(opt StepOption, exprList ...Expr) ([]Object, error) {
+func (r *Runtime) stepMany(exprList ...Expr) ([]Object, error) {
 	var outputs []Object
-	if len(exprList) > 0 {
-		for i := 0; i < len(exprList)-1; i++ {
-			output, err := r.Step(exprList[i])
-			if err != nil {
-				return nil, err
-			}
-			outputs = append(outputs, output)
-		}
-		output, err := r.Step(exprList[len(exprList)-1], opt)
+	for _, expr := range exprList {
+		v, err := r.Step(expr)
 		if err != nil {
 			return nil, err
 		}
-		outputs = append(outputs, output)
+		outputs = append(outputs, v)
 	}
 	return outputs, nil
 }
@@ -615,13 +575,9 @@ import (
 
 type ArithmeticExtension = func(...Object) (Object, error)
 
-func (r *Runtime) stepWithTailCallOptimization(exprList ...Expr) ([]Object, error) {
-	return r.stepWithTailOption(TCOStepOption(true), exprList...)
-}
-
 func (r *Runtime) WithArithmeticExtension(name Name, f ArithmeticExtension) *Runtime {
 	return r.LoadModule(name, func(r *Runtime, expr LambdaExpr) (Object, error) {
-		args, err := r.stepWithTailCallOptimization(expr.Args...)
+		args, err := r.stepMany(expr.Args...)
 		if err != nil {
 			return nil, err
 		}
@@ -634,7 +590,7 @@ func letModule(r *Runtime, expr LambdaExpr) (Object, error) {
 		return nil, fmt.Errorf("not enough arguments for let")
 	}
 	name := expr.Args[0].(Name)
-	outputs, err := r.stepWithTailCallOptimization(expr.Args[1:]...)
+	outputs, err := r.stepMany(expr.Args[1:]...)
 	if err != nil {
 		return nil, err
 	}
@@ -647,7 +603,7 @@ func delModule(r *Runtime, expr LambdaExpr) (Object, error) {
 		return nil, fmt.Errorf("not enough arguments for del")
 	}
 	name := expr.Args[0].(Name)
-	_, err := r.stepWithTailCallOptimization(expr.Args[1:]...)
+	_, err := r.stepMany(expr.Args[1:]...)
 	if err != nil {
 		return nil, err
 	}
@@ -693,7 +649,7 @@ func caseModule(r *Runtime, expr LambdaExpr) (Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	return r.Step(expr.Args[i+1], TCOStepOption(true))
+	return r.Step(expr.Args[i+1])
 }
 
 func resetModule(r *Runtime, expr LambdaExpr) (Object, error) {
@@ -808,7 +764,7 @@ func peakArithmeticExtension(value ...Object) (Object, error) {
 // TODO - implement map filter reduce
 
 func stackModule(r *Runtime, expr LambdaExpr) (Object, error) {
-	_, err := r.stepWithTailCallOptimization(expr.Args...)
+	_, err := r.stepMany(expr.Args...)
 	if err != nil {
 		return nil, err
 	}
@@ -816,7 +772,7 @@ func stackModule(r *Runtime, expr LambdaExpr) (Object, error) {
 }
 
 func moduleModule(r *Runtime, expr LambdaExpr) (Object, error) {
-	_, err := r.stepWithTailCallOptimization(expr.Args...)
+	_, err := r.stepMany(expr.Args...)
 	if err != nil {
 		return nil, err
 	}
@@ -892,6 +848,10 @@ func (r *Runtime) LoadParseLiteral(f func(lit Name) (Object, error)) *Runtime {
 	r.parseLiteral = f
 	return r
 }
+./pkg/fp/runtime_types.go
+package fp
+
+// types - TODO implement custom data types like Int, List, Dict
 ./example.lisp
 // define multiplication
 (let mul
@@ -962,19 +922,11 @@ func (r *Runtime) LoadParseLiteral(f func(lit Name) (Object, error)) *Runtime {
 (let add3 (addx t))                                     // partial function
 (print (add3 14) 9)
 
-// dict example
-(let d (dict_new))                                      // new dict
-(let d (dict_set d 2 300))                                 // set value
-(let d (dict_set d 3 500))                                 // set value
-(let d (dict_set d 2 200))                                 // set value
-(print (dict_get d 2) 11)                                 // should print 200
-
-// end dict example
 
 (print (div 6 2))                                      // test extension
 
-(let l (make_list 1 2 3 5 -7))                        // test list
-(let l (append_list l 6))
+(let l (list 1 2 3 5 -7))                        // test list
+(let l (append l 6))
 (print l)
 
 

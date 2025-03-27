@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
+
+# make manual
 rm -rf MANUAL.md
 touch MANUAL.md
 echo "\`\`\`lisp" >> MANUAL.md
 go run cmd/man/main.go >> MANUAL.md 2>&1
 echo "\`\`\`" >> MANUAL.md
+
+# make chat
 ./export_to_chat > chat.txt
 
+# make webassembly binary
+GOOS=js GOARCH=wasm go build -o web_repl/main.wasm web_repl/main.go
 
 git add .
 git commit -m "auto_push"

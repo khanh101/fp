@@ -6,7 +6,7 @@ A simple functional programming language in 130 lines of code with `functions as
 
 A REPL is available by running `go run bin/repl/main.go`. An example program is at `example.lisp`.
 
-Have fun!
+Have fun 🤗
 
 ## How to implement data structures like list, dict
 

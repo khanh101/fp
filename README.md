@@ -4,15 +4,19 @@ A simple functional programming language in 130 lines of code with `functions as
 
 ## How to use?
 
-A REPL is available by running `go run bin/repl/main.go`. An example program is at `example.lisp`.
+A REPL is available by running `go run cmd/repl/main.go`
+
+- a simple program `example.lisp`
+
+- hello world ! `echo "(print (unicode 72 101 108 108 111 44 32 87 111 114 108 100 33))" | go run cmd/repl/main.go 2> /dev/null`
 
 Have fun 🤗
 
-## How to implement data structures like list, dict
+## MANUAL
 
-data structures can be implemented using functions, example below
-
-floating point is useful
+- for builtin modules, extensions, see `MANUAL.md`
+- wildcard symbol: `_` is a special symbol used in `case` to mark every other cases
+- no match is `case` is an undefined behavior
 
 ## How to handle infix operator?
 
@@ -42,14 +46,3 @@ each function call only need its own variable scope, they can execute every expr
 
 no 😅
 
-## MANUAL 
-
-- for builtin modules, extensions, see `MANUAL.md`
-- wildcard symbol: `_` is a special symbol used in `case` to mark every other cases
-- no match is `case` is an undefined behavior
-
-## a simple program
-
-- see `example.lisp`
-
-- hello world ! `echo "(print (unicode 72 101 108 108 111 44 32 87 111 114 108 100 33))" | go run cmd/repl/main.go 2> /dev/null`

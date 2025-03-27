@@ -1,6 +1,8 @@
 package fp
 
-func (r *Runtime) WithArithmeticExtension(name Name, f func(...Value) Value) *Runtime {
+type ArithmeticExtension = func(...Value) Value
+
+func (r *Runtime) WithArithmeticExtension(name Name, f ArithmeticExtension) *Runtime {
 	return r.WithExtension(name, func(r *Runtime, expr LambdaExpr) Value {
 		var args []Value
 		for i := 0; i < len(expr.Args); i++ {
@@ -57,4 +59,35 @@ func caseExtension(r *Runtime, expr LambdaExpr) Value {
 		panic("runtime error")
 	}()
 	return r.Step(expr.Args[i+1], WithTailCallOptimization)
+}
+
+func tailArithmeticExtension(value ...Value) Value {
+	return value[len(value)-1]
+}
+
+func addArithmeticExtension(value ...Value) Value {
+	v := 0
+	for i := 0; i < len(value); i++ {
+		v += value[i].(int)
+	}
+	return v
+}
+
+func subArithmeticExtension(value ...Value) Value {
+	if len(value) != 2 {
+		panic("runtime error")
+	}
+	return value[0].(int) - value[1].(int)
+}
+
+func signArithmeticExtension(value ...Value) Value {
+	v := value[len(value)-1].(int)
+	switch {
+	case v > 0:
+		return +1
+	case v < 0:
+		return -1
+	default:
+		return 0
+	}
 }

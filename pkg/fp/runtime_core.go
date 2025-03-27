@@ -7,7 +7,7 @@ import (
 
 const DETECT_NONPURE = true
 
-func (r *Runtime) WithExtension(name Name, f func(r *Runtime, expr LambdaExpr) Value) *Runtime {
+func (r *Runtime) WithExtension(name Name, f Extension) *Runtime {
 	r.extension[name] = f
 	return r
 }

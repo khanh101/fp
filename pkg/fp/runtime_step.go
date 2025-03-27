@@ -61,7 +61,7 @@ func (r *Runtime) Step(expr Expr) (Object, error) {
 			r.Stack = r.Stack[:len(r.Stack)-1]
 			return v, nil
 		case Module:
-			return f(r, expr)
+			return f.Exec(r, expr)
 		default:
 			return nil, fmt.Errorf("function or module %s found but wrong type", expr.Name.String())
 		}

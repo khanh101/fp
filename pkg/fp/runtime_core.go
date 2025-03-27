@@ -42,3 +42,21 @@ func (r *Runtime) LoadParseLiteral(f func(lit Name) (Object, error)) *Runtime {
 	r.parseLiteral = f
 	return r
 }
+
+type Extension struct {
+	Exec func(...Object) (Object, error)
+	Man  string
+}
+
+func (r *Runtime) LoadExtension(name Name, e Extension) *Runtime {
+	return r.LoadModule(name, Module{
+		Exec: func(r *Runtime, expr LambdaExpr) (Object, error) {
+			args, err := r.stepMany(expr.Args...)
+			if err != nil {
+				return nil, err
+			}
+			return e.Exec(args...)
+		},
+		Man: e.Man,
+	})
+}

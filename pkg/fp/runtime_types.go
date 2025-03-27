@@ -40,10 +40,13 @@ func (l Lambda) String() string {
 	return l.Impl.String()
 }
 
-type Module func(r *Runtime, expr LambdaExpr) (Object, error)
+type Module struct {
+	Exec func(r *Runtime, expr LambdaExpr) (Object, error)
+	Man  string `json:"man,omitempty"`
+}
 
 func (m Module) String() string {
-	return fmt.Sprintf("[module %p]", m)
+	return m.Man
 }
 
 type List []Object

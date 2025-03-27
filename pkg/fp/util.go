@@ -7,6 +7,7 @@ import (
 
 func panicError(format string, args ...interface{}) {
 	_, _ = fmt.Fprintf(os.Stderr, "ERROR: "+format, args...)
+	panic(fmt.Errorf(format, args...))
 }
 func logWarn(format string, args ...interface{}) {
 	_, _ = fmt.Fprintf(os.Stderr, "WARNING: "+format, args...)

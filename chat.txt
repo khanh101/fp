@@ -173,32 +173,33 @@ no 😅
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"fp/pkg/fp"
 	"os"
 )
 
-func main() {
-	buffer, err := os.ReadFile("example.lisp")
-	if err != nil {
-		panic(err)
-	}
-	str := string(buffer)
-	tokenList := fp.Tokenize(str)
+func tokenIter() <-chan fp.Token {
+	outCh := make(chan fp.Token)
+	go func(outCh chan fp.Token) {
+		defer close(outCh)
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			line := scanner.Text()
 
-	exprList, tokenList := fp.ParseAll(tokenList)
-	if len(tokenList) > 0 {
-		panic("parse error")
-	}
-
-	r := fp.NewBasicRuntime().
-		WithDebug(false).
-		WithArithmeticExtension("div", func(nums ...fp.Object) fp.Object {
-			if len(nums) != 2 {
-				panic("runtime error")
+			for _, tok := range fp.Tokenize(line) {
+				outCh <- tok
 			}
-			return nums[0].(int) / nums[1].(int)
-		}).
+		}
+		if err := scanner.Err(); err != nil {
+			panic(err)
+		}
+	}(outCh)
+	return outCh
+}
+
+func main() {
+	r := fp.NewBasicRuntime().
 		WithArithmeticExtension("print", func(nums ...fp.Object) fp.Object {
 			for _, num := range nums {
 				fmt.Printf("%v ", num)
@@ -206,13 +207,11 @@ func main() {
 			fmt.Println()
 			return len(nums)
 		}).
-		WithArithmeticExtension("input", func(nums ...fp.Object) fp.Object {
-			var v int
-			_, err := fmt.Scanf("%d", &v)
-			if err != nil {
-				panic(err)
+		WithArithmeticExtension("div", func(nums ...fp.Object) fp.Object {
+			if len(nums) != 2 {
+				panic("runtime error")
 			}
-			return v
+			return nums[0].(int) / nums[1].(int)
 		}).
 		WithArithmeticExtension("make_list", func(nums ...fp.Object) fp.Object {
 			var v []fp.Object
@@ -224,9 +223,11 @@ func main() {
 		WithArithmeticExtension("append_list", func(nums ...fp.Object) fp.Object {
 			return append(nums[0].([]fp.Object), nums[1:]...)
 		})
-	for _, expr := range exprList {
+
+	for expr := range fp.ParseAllREPL(tokenIter()) {
 		r.Step(expr)
 	}
+	return
 }
 ./pkg/fp/runtime_step.go
 package fp
@@ -509,6 +510,7 @@ import (
 
 func panicError(format string, args ...interface{}) {
 	_, _ = fmt.Fprintf(os.Stderr, "ERROR: "+format, args...)
+	panic(fmt.Errorf(format, args...))
 }
 func logWarn(format string, args ...interface{}) {
 	_, _ = fmt.Fprintf(os.Stderr, "WARNING: "+format, args...)
@@ -597,6 +599,51 @@ func ParseAll(tokenList []Token) ([]Expr, []Token) {
 		exprList = append(exprList, expr)
 	}
 	return exprList, tokenList
+}
+
+func ParseAllREPL(tokenCh <-chan Token) <-chan Expr {
+	outCh := make(chan Expr)
+	go func(outCh chan Expr) {
+		defer close(outCh)
+		for {
+			expr, endWithClose, eof := parseREPL(tokenCh)
+			if eof {
+				break
+			}
+			if endWithClose {
+				panicError("parse error")
+			}
+			outCh <- expr
+		}
+	}(outCh)
+	return outCh
+}
+
+func parseREPL(tokenCh <-chan Token) (expr Expr, endWithClose bool, eof bool) {
+	for head := range tokenCh {
+		switch head {
+		case "(":
+			funcName := <-tokenCh
+			var exprList []Expr
+			for {
+				expr, endWithClose, eof = parseREPL(tokenCh)
+				if eof {
+					panicError("parse error")
+				}
+				if endWithClose {
+					break
+				}
+				exprList = append(exprList, expr)
+			}
+			return LambdaExpr{
+				Name: Name(funcName),
+				Args: exprList,
+			}, false, false
+		default:
+			return Name(head), head == ")", false
+		}
+	}
+	return nil, false, true
 }
 
 func parse(tokenList []Token) (Expr, []Token, bool) {
@@ -795,7 +842,6 @@ func (r *Runtime) WithDebug(debug bool) *Runtime {
     )
 )
 
-(let x (input))                                           // waiting for user input
-(print (fibonacci x) 11)                                // print the x-th fibonacci
+(print (fibonacci 20) 11)                                // print the 20-th fibonacci
 
 do you have any comment on this?

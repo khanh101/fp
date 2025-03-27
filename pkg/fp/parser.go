@@ -45,6 +45,51 @@ func ParseAll(tokenList []Token) ([]Expr, []Token) {
 	return exprList, tokenList
 }
 
+func ParseAllREPL(tokenCh <-chan Token) <-chan Expr {
+	outCh := make(chan Expr)
+	go func(outCh chan Expr) {
+		defer close(outCh)
+		for {
+			expr, endWithClose, eof := parseREPL(tokenCh)
+			if eof {
+				break
+			}
+			if endWithClose {
+				panicError("parse error")
+			}
+			outCh <- expr
+		}
+	}(outCh)
+	return outCh
+}
+
+func parseREPL(tokenCh <-chan Token) (expr Expr, endWithClose bool, eof bool) {
+	for head := range tokenCh {
+		switch head {
+		case "(":
+			funcName := <-tokenCh
+			var exprList []Expr
+			for {
+				expr, endWithClose, eof = parseREPL(tokenCh)
+				if eof {
+					panicError("parse error")
+				}
+				if endWithClose {
+					break
+				}
+				exprList = append(exprList, expr)
+			}
+			return LambdaExpr{
+				Name: Name(funcName),
+				Args: exprList,
+			}, false, false
+		default:
+			return Name(head), head == ")", false
+		}
+	}
+	return nil, false, true
+}
+
 func parse(tokenList []Token) (Expr, []Token, bool) {
 	if len(tokenList) == 0 {
 		return nil, nil, false

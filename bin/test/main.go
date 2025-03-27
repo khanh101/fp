@@ -1,32 +1,33 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"fp/pkg/fp"
 	"os"
 )
 
-func main() {
-	buffer, err := os.ReadFile("example.lisp")
-	if err != nil {
-		panic(err)
-	}
-	str := string(buffer)
-	tokenList := fp.Tokenize(str)
+func tokenIter() <-chan fp.Token {
+	outCh := make(chan fp.Token)
+	go func(outCh chan fp.Token) {
+		defer close(outCh)
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			line := scanner.Text()
 
-	exprList, tokenList := fp.ParseAll(tokenList)
-	if len(tokenList) > 0 {
-		panic("parse error")
-	}
-
-	r := fp.NewBasicRuntime().
-		WithDebug(false).
-		WithArithmeticExtension("div", func(nums ...fp.Object) fp.Object {
-			if len(nums) != 2 {
-				panic("runtime error")
+			for _, tok := range fp.Tokenize(line) {
+				outCh <- tok
 			}
-			return nums[0].(int) / nums[1].(int)
-		}).
+		}
+		if err := scanner.Err(); err != nil {
+			panic(err)
+		}
+	}(outCh)
+	return outCh
+}
+
+func main() {
+	r := fp.NewBasicRuntime().
 		WithArithmeticExtension("print", func(nums ...fp.Object) fp.Object {
 			for _, num := range nums {
 				fmt.Printf("%v ", num)
@@ -34,13 +35,11 @@ func main() {
 			fmt.Println()
 			return len(nums)
 		}).
-		WithArithmeticExtension("input", func(nums ...fp.Object) fp.Object {
-			var v int
-			_, err := fmt.Scanf("%d", &v)
-			if err != nil {
-				panic(err)
+		WithArithmeticExtension("div", func(nums ...fp.Object) fp.Object {
+			if len(nums) != 2 {
+				panic("runtime error")
 			}
-			return v
+			return nums[0].(int) / nums[1].(int)
 		}).
 		WithArithmeticExtension("make_list", func(nums ...fp.Object) fp.Object {
 			var v []fp.Object
@@ -52,7 +51,9 @@ func main() {
 		WithArithmeticExtension("append_list", func(nums ...fp.Object) fp.Object {
 			return append(nums[0].([]fp.Object), nums[1:]...)
 		})
-	for _, expr := range exprList {
+
+	for expr := range fp.ParseAllREPL(tokenIter()) {
 		r.Step(expr)
 	}
+	return
 }

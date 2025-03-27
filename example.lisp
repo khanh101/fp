@@ -99,6 +99,5 @@
     )
 )
 
-(let x (input))                                           // waiting for user input
-(print (fibonacci x) 11)                                // print the x-th fibonacci
+(print (fibonacci 20) 11)                                // print the 20-th fibonacci
 

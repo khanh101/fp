@@ -47,6 +47,7 @@ func NewStdRuntime() *Runtime {
 		LoadExtension("append", appendExtension).
 		LoadExtension("slice", sliceExtension).
 		LoadExtension("peak", peakExtension).
+		LoadExtension("len", lenExtension).
 		LoadModule("map", mapModule).
 		LoadExtension("type", typeExtension).
 		LoadModule("stack", stackModule).

@@ -71,6 +71,8 @@ module: (doom) - i told you - we don't have Doom yet
 module: (kaboom) - remove everything except global frame
 >>>lambda
 module: (lambda x y (add x y) - declare a function
+>>>len
+module: (len l) - get length of a list of dict
 >>>let
 module: (let x 3) - assign value 3 to local variable x
 >>>list
@@ -391,6 +393,7 @@ func NewStdRuntime() *Runtime {
 		LoadExtension("append", appendExtension).
 		LoadExtension("slice", sliceExtension).
 		LoadExtension("peak", peakExtension).
+		LoadExtension("len", lenExtension).
 		LoadModule("map", mapModule).
 		LoadExtension("type", typeExtension).
 		LoadModule("stack", stackModule).
@@ -873,6 +876,23 @@ var peakExtension = Extension{
 	Man: "module: (peak l 3 2) - get elem from list (can get multiple elements) (list is 1-indexing)",
 }
 
+var lenExtension = Extension{
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
+		if len(values) != 1 {
+			return nil, fmt.Errorf("len requires 1 argument")
+		}
+		switch v := values[0].(type) {
+		case List:
+			return Int(len(v)), nil
+		case Dict:
+			return Int(len(v)), nil
+		default:
+			return nil, fmt.Errorf("first argument must be list or dict")
+		}
+	},
+	Man: "module: (len l) - get length of a list of dict",
+}
+
 var mapModule = Module{
 	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
 		if len(expr.Args) != 2 {
@@ -1344,16 +1364,15 @@ func (r *fpRepl) ReplyInput(input string, interruptCh <-chan struct{}) (output s
 			if expr != nil {
 				executed = true
 
-				var copiedStack []fp.Frame
-				for _, frame := range r.runtime.Stack {
-					copiedStack = append(copiedStack, make(fp.Frame).Update(frame))
-				}
+				lastFrame := make(fp.Frame).Update(r.runtime.Stack[len(r.runtime.Stack)-1])
+				stackSize := len(r.runtime.Stack)
 				output, err := r.runtime.Step(expr, interruptCh)
 				if err != nil {
 					if errors.Is(err, fp.InterruptError) {
 						// reset stack size
-						r.runtime.Stack = copiedStack
-						r.write("interrupted - stack was recovered")
+						r.runtime.Stack = r.runtime.Stack[:stackSize-1]
+						r.runtime.Stack = append(r.runtime.Stack, lastFrame)
+						r.writeln("interrupted - stack was recovered")
 					}
 					r.writeln(err.Error())
 					continue

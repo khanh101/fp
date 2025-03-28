@@ -293,6 +293,23 @@ var peakExtension = Extension{
 	Man: "module: (peak l 3 2) - get elem from list (can get multiple elements) (list is 1-indexing)",
 }
 
+var lenExtension = Extension{
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
+		if len(values) != 1 {
+			return nil, fmt.Errorf("len requires 1 argument")
+		}
+		switch v := values[0].(type) {
+		case List:
+			return Int(len(v)), nil
+		case Dict:
+			return Int(len(v)), nil
+		default:
+			return nil, fmt.Errorf("first argument must be list or dict")
+		}
+	},
+	Man: "module: (len l) - get length of a list of dict",
+}
+
 var mapModule = Module{
 	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
 		if len(expr.Args) != 2 {

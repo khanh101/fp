@@ -16,6 +16,8 @@ module: (doom) - i told you - we don't have Doom yet
 module: (kaboom) - remove everything except global frame
 >>>lambda
 module: (lambda x y (add x y) - declare a function
+>>>len
+module: (len l) - get length of a list of dict
 >>>let
 module: (let x 3) - assign value 3 to local variable x
 >>>list

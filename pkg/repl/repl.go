@@ -29,16 +29,15 @@ func (r *fpRepl) ReplyInput(input string, interruptCh <-chan struct{}) (output s
 			if expr != nil {
 				executed = true
 
-				var copiedStack []fp.Frame
-				for _, frame := range r.runtime.Stack {
-					copiedStack = append(copiedStack, make(fp.Frame).Update(frame))
-				}
+				lastFrame := make(fp.Frame).Update(r.runtime.Stack[len(r.runtime.Stack)-1])
+				stackSize := len(r.runtime.Stack)
 				output, err := r.runtime.Step(expr, interruptCh)
 				if err != nil {
 					if errors.Is(err, fp.InterruptError) {
 						// reset stack size
-						r.runtime.Stack = copiedStack
-						r.write("interrupted - stack was recovered")
+						r.runtime.Stack = r.runtime.Stack[:stackSize-1]
+						r.runtime.Stack = append(r.runtime.Stack, lastFrame)
+						r.writeln("interrupted - stack was recovered")
 					}
 					r.writeln(err.Error())
 					continue

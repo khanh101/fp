@@ -93,7 +93,7 @@ module: (mod 2 (add 1 1)) - exec two expressions and return modulo
 >>>mul
 module: (mul 1 (add 2 3) 3) - exec a sequence of expressions and return the product
 >>>peak
-module: (peak l 3 2) - get elem from list (can get multiple elements) (list is 1-indexing)
+module: (peek l 3 2) - get elem from list (can get multiple elements) (list is 1-indexing)
 >>>print
 module: (print 1 x (lambda 3)) - print values
 >>>sign
@@ -401,7 +401,7 @@ func NewStdRuntime() *Runtime {
 		LoadExtension("list", listExtension).
 		LoadExtension("append", appendExtension).
 		LoadExtension("slice", sliceExtension).
-		LoadExtension("peak", peakExtension).
+		LoadExtension("peak", peekExtension).
 		LoadExtension("len", lenExtension).
 		LoadModule("map", mapModule).
 		LoadExtension("type", typeExtension).
@@ -853,7 +853,7 @@ var sliceExtension = Extension{
 	Man: "module: (slice l 2 3) - make a slice of a list l[2, 3] (list is 1-indexing and slice is a closed interval)",
 }
 
-var peakExtension = Extension{
+var peekExtension = Extension{
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		if len(values) < 2 {
 			return nil, fmt.Errorf("peak requires at least 2 arguments")
@@ -882,7 +882,7 @@ var peakExtension = Extension{
 		}
 		return outputs, nil
 	},
-	Man: "module: (peak l 3 2) - get elem from list (can get multiple elements) (list is 1-indexing)",
+	Man: "module: (peek l 3 2) - get elem from list (can get multiple elements) (list is 1-indexing)",
 }
 
 var lenExtension = Extension{

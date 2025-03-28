@@ -29,7 +29,7 @@ module: (mod 2 (add 1 1)) - exec two expressions and return modulo
 >>>mul
 module: (mul 1 (add 2 3) 3) - exec a sequence of expressions and return the product
 >>>peak
-module: (peak l 3 2) - get elem from list (can get multiple elements) (list is 1-indexing)
+module: (peek l 3 2) - get elem from list (can get multiple elements) (list is 1-indexing)
 >>>print
 module: (print 1 x (lambda 3)) - print values
 >>>sign

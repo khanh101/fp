@@ -261,7 +261,7 @@ var sliceExtension = Extension{
 	Man: "module: (slice l 2 3) - make a slice of a list l[2, 3] (list is 1-indexing and slice is a closed interval)",
 }
 
-var peakExtension = Extension{
+var peekExtension = Extension{
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		if len(values) < 2 {
 			return nil, fmt.Errorf("peak requires at least 2 arguments")
@@ -290,7 +290,7 @@ var peakExtension = Extension{
 		}
 		return outputs, nil
 	},
-	Man: "module: (peak l 3 2) - get elem from list (can get multiple elements) (list is 1-indexing)",
+	Man: "module: (peek l 3 2) - get elem from list (can get multiple elements) (list is 1-indexing)",
 }
 
 var lenExtension = Extension{

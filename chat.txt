@@ -1124,10 +1124,10 @@ func getType(o Object) String {
 	case Dict:
 		return "Dict"
 	case Wildcard:
-		return "wildcard"
+		return "Wildcard"
 	case Unwrap:
 		// unfortunately, one cannot use (type *) to get the type if unwrap since it will try to replace unwrap the next argument
-		return "unwrap"
+		return "Unwrap"
 	default:
 		return "unknown"
 	}

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FP REPL</title>
     <script src="wasm_exec.js"></script>
-    <style>
+    <style id="style-block">
         body {
             background-color: #181818;
             color: #ffffff;
@@ -86,6 +86,7 @@
         #copy-button:hover {
             background-color: #00b3b3;
         }
+
         #clear-btn {
             background-color: rgba(212, 182, 0, 0.65);
             color: #181818;
@@ -99,6 +100,22 @@
         }
 
         #clear-btn:hover {
+            background-color: #00b3b3;
+        }
+
+        #toggle-css {
+            background-color: rgba(212, 182, 0, 0.65);
+            color: #181818;
+            border: none;
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        #toggle-css:hover {
             background-color: #00b3b3;
         }
 
@@ -119,6 +136,8 @@
 <body>
 
 <div id="repl-container">
+    <h3>FP REPL - this is an experimental REPL for FP -
+        a binary version <a href="https://github.com/khanh101/fp/blob/master/cmd/repl/main.go"> here </a> </h3>
     <div id="output"></div>
     <div class="input-line">
         <span id="prompt">>>> </span>
@@ -126,7 +145,8 @@
         <span class="cursor"></span>
     </div>
     <button id="copy-button">copy all</button>
-    <button id="clear-btn">clear parser buffer</button>
+    <button id="clear-btn">clear parser buffer (simulate control + c)</button>
+    <button id="toggle-css">toggle css</button> <!-- Button to toggle CSS -->
 </div>
 
 <script>
@@ -159,7 +179,8 @@
         selection.addRange(range);
         document.execCommand('copy');
     });
-    // clear buffer
+
+    // Clear buffer
     document.getElementById("clear-btn").addEventListener("click", () => {
         // Clear the output in the web UI
         // outputEl.innerHTML = "";
@@ -169,8 +190,6 @@
             window.clearBuffer();
         }
     });
-
-
 
     // Function to handle user input
     const outputEl = document.getElementById("output");
@@ -207,6 +226,16 @@
         } else if (e.key === "ArrowDown" && historyIndex < history.length - 1) {
             historyIndex++; // Move down in the history
             inputEl.value = history[historyIndex] || "";
+        }
+    });
+
+    // Toggle CSS on and off
+    document.getElementById("toggle-css").addEventListener("click", () => {
+        const styleBlock = document.getElementById("style-block");
+        if (styleBlock.disabled) {
+            styleBlock.disabled = false; // Enable CSS
+        } else {
+            styleBlock.disabled = true;  // Disable CSS
         }
     });
 </script>

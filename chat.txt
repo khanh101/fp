@@ -212,6 +212,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"fp/pkg/fp"
 	"fp/pkg/repl"
 	"os"
 	"os/signal"
@@ -219,7 +220,7 @@ import (
 )
 
 func main() {
-	repl, welcome := repl.NewFP()
+	repl, welcome := repl.NewFP(fp.NewStdRuntime())
 	_, _ = fmt.Fprintf(os.Stderr, welcome)
 
 	signCh := make(chan os.Signal, 1)
@@ -253,6 +254,7 @@ package main
 
 import (
 	"fmt"
+	"fp/pkg/fp"
 	"fp/pkg/repl"
 	"strings"
 	"syscall/js"
@@ -289,7 +291,7 @@ func clearBuffer(this js.Value, p []js.Value) interface{} {
 func main() {
 	// initialize
 	var welcome string
-	r, welcome = repl.NewFP()
+	r, welcome = repl.NewFP(fp.NewStdRuntime())
 	write(welcome)
 
 	js.Global().Set("evaluate", js.FuncOf(evaluate))
@@ -1270,9 +1272,9 @@ func (r *fpRepl) writeln(format string, a ...interface{}) {
 	r.write(format+"\n", a...)
 }
 
-func NewFP() (repl REPL, welcome string) {
+func NewFP(runtime *fp.Runtime) (repl REPL, welcome string) {
 	r := &fpRepl{
-		runtime: fp.NewStdRuntime(),
+		runtime: runtime,
 		parser:  &fp.Parser{},
 		buffer:  "",
 	}

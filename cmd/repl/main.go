@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"fp/pkg/fp"
 	"fp/pkg/repl"
 	"os"
 	"os/signal"
@@ -10,7 +11,7 @@ import (
 )
 
 func main() {
-	repl, welcome := repl.NewFP()
+	repl, welcome := repl.NewFP(fp.NewStdRuntime())
 	_, _ = fmt.Fprintf(os.Stderr, welcome)
 
 	signCh := make(chan os.Signal, 1)

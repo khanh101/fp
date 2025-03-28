@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"fp/pkg/fp"
 	"fp/pkg/repl"
 	"strings"
 	"syscall/js"
@@ -38,7 +39,7 @@ func clearBuffer(this js.Value, p []js.Value) interface{} {
 func main() {
 	// initialize
 	var welcome string
-	r, welcome = repl.NewFP()
+	r, welcome = repl.NewFP(fp.NewStdRuntime())
 	write(welcome)
 
 	js.Global().Set("evaluate", js.FuncOf(evaluate))

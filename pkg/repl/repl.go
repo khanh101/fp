@@ -61,9 +61,9 @@ func (r *fpRepl) writeln(format string, a ...interface{}) {
 	r.write(format+"\n", a...)
 }
 
-func NewFP() (repl REPL, welcome string) {
+func NewFP(runtime *fp.Runtime) (repl REPL, welcome string) {
 	r := &fpRepl{
-		runtime: fp.NewStdRuntime(),
+		runtime: runtime,
 		parser:  &fp.Parser{},
 		buffer:  "",
 	}

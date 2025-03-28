@@ -76,7 +76,7 @@ func main() {
 			rl.SetPrompt(">>> ")
 		} else {
 			// Otherwise, indent continuation line (you can choose what to show)
-			rl.SetPrompt("    ") // Or set it to "" for no prompt if not executed
+			rl.SetPrompt("") // Or set it to "" for no prompt if not executed
 		}
 	}
 }

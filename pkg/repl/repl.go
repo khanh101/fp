@@ -1,6 +1,7 @@
 package repl
 
 import (
+	"errors"
 	"fmt"
 	"fp/pkg/fp"
 	"sort"
@@ -27,7 +28,12 @@ func (r *fpRepl) ReplyInput(input string, interruptCh <-chan struct{}) (output s
 			expr := r.parser.Input(token)
 			if expr != nil {
 				executed = true
+				stackSize := len(r.runtime.Stack)
 				output, err := r.runtime.Step(expr, interruptCh)
+				if errors.Is(err, fp.InterruptError) {
+					// reset stack size
+					r.runtime.Stack = r.runtime.Stack[:stackSize]
+				}
 				if err != nil {
 					r.writeln(err.Error())
 					continue

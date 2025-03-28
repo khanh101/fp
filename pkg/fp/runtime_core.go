@@ -97,12 +97,20 @@ func (r *Runtime) searchOnStack(name String) (Object, error) {
 	return nil, fmt.Errorf("object not found %s", name)
 }
 
+type Interrupt struct{}
+
+func (i Interrupt) Error() string {
+	return "interrupt"
+}
+
+var InterruptError = Interrupt{}
+
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
 func (r *Runtime) Step(expr Expr, interruptCh <-chan struct{}) (Object, error) {
 	select {
 	case <-interruptCh:
-		return nil, errors.New("interrupt")
+		return nil, InterruptError
 	default:
 		switch expr := expr.(type) {
 		case Name:

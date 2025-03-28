@@ -1343,13 +1343,18 @@ func (r *fpRepl) ReplyInput(input string, interruptCh <-chan struct{}) (output s
 			expr := r.parser.Input(token)
 			if expr != nil {
 				executed = true
-				stackSize := len(r.runtime.Stack)
-				output, err := r.runtime.Step(expr, interruptCh)
-				if errors.Is(err, fp.InterruptError) {
-					// reset stack size
-					r.runtime.Stack = r.runtime.Stack[:stackSize]
+
+				var copiedStack []fp.Frame
+				for _, frame := range r.runtime.Stack {
+					copiedStack = append(copiedStack, make(fp.Frame).Update(frame))
 				}
+				output, err := r.runtime.Step(expr, interruptCh)
 				if err != nil {
+					if errors.Is(err, fp.InterruptError) {
+						// reset stack size
+						r.runtime.Stack = copiedStack
+						r.write("interrupted - stack was recovered")
+					}
 					r.writeln(err.Error())
 					continue
 				}

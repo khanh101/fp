@@ -3,7 +3,7 @@ package fp
 // Expr : union of Name, LambdaExpr
 type Expr interface {
 	String() string
-	AssertExpr() struct{} // for type-safety
+	MustTypeExpr() struct{} // for type-safety every Expr must implement this
 }
 
 type Name string
@@ -12,11 +12,11 @@ func (e Name) String() string {
 	return string(e)
 }
 
-func (e Name) AssertExpr() struct{} {
+func (e Name) MustTypeExpr() struct{} {
 	return struct{}{}
 }
 
-func (e Name) AssertObject() struct{} {
+func (e Name) MustTypeObject() struct{} {
 	return struct{}{}
 }
 
@@ -37,6 +37,6 @@ func (e LambdaExpr) String() string {
 	return s
 }
 
-func (e LambdaExpr) AssertExpr() struct{} {
+func (e LambdaExpr) MustTypeExpr() struct{} {
 	return struct{}{}
 }

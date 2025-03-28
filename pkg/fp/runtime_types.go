@@ -7,7 +7,7 @@ import "fmt"
 // Object : union - TODO : introduce new data types
 type Object interface {
 	String() string
-	AssertObject() struct{} // for type-safety
+	MustTypeObject() struct{} // for type-safety every Object must implement this
 }
 
 func getType(o Object) String {
@@ -40,7 +40,7 @@ func (i Int) String() string {
 	return fmt.Sprintf("%d", i)
 }
 
-func (i Int) AssertObject() struct{} {
+func (i Int) MustTypeObject() struct{} {
 	return struct{}{}
 }
 
@@ -57,7 +57,7 @@ func (d Dict) String() string {
 	return s
 }
 
-func (d Dict) AssertObject() struct{} {
+func (d Dict) MustTypeObject() struct{} {
 	return struct{}{}
 }
 
@@ -67,7 +67,7 @@ func (u Unwrap) String() string {
 	return "*"
 }
 
-func (u Unwrap) AssertObject() struct{} {
+func (u Unwrap) MustTypeObject() struct{} {
 	return struct{}{}
 }
 
@@ -77,7 +77,7 @@ func (w Wildcard) String() string {
 	return "_"
 }
 
-func (w Wildcard) AssertObject() struct{} {
+func (w Wildcard) MustTypeObject() struct{} {
 	return struct{}{}
 }
 
@@ -87,7 +87,7 @@ func (s String) String() string {
 	return string(s)
 }
 
-func (s String) AssertObject() struct{} {
+func (s String) MustTypeObject() struct{} {
 	return struct{}{}
 }
 
@@ -107,7 +107,7 @@ func (l Lambda) String() string {
 	return s
 }
 
-func (l Lambda) AssertObject() struct{} {
+func (l Lambda) MustTypeObject() struct{} {
 	return struct{}{}
 }
 
@@ -120,7 +120,7 @@ func (m Module) String() string {
 	return m.Man
 }
 
-func (m Module) AssertObject() struct{} {
+func (m Module) MustTypeObject() struct{} {
 	return struct{}{}
 }
 
@@ -136,6 +136,6 @@ func (l List) String() string {
 	return s
 }
 
-func (l List) AssertObject() struct{} {
+func (l List) MustTypeObject() struct{} {
 	return struct{}{}
 }

@@ -51,5 +51,6 @@ func NewStdRuntime() *Runtime {
 		LoadExtension("type", typeExtension).
 		LoadModule("stack", stackModule).
 		LoadExtension("unicode", unicodeExtension).
-		LoadModule("kaboom", kaboomModule)
+		LoadModule("kaboom", kaboomModule).
+		LoadExtension("doom", doomExtension)
 }

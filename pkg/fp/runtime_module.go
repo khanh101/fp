@@ -90,6 +90,13 @@ var kaboomModule = Module{
 	Man: "module: (kaboom) - kaboom stack - it is like `rm -rf`, you will lose everything",
 }
 
+var doomExtension = Extension{
+	Exec: func(object ...Object) (Object, error) {
+		return String(fmt.Sprintf("i told you - we don't have Doom yet")), nil
+	},
+	Man: "module: (doom)",
+}
+
 var tailExtension = Extension{
 	Exec: func(values ...Object) (Object, error) {
 		return values[len(values)-1], nil

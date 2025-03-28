@@ -10,6 +10,8 @@ module: (case x 1 2 4 5) - case, if x=1 then return 3, if x=4 the return 5
 module: (del x) - delete variable x
 >>>div
 module: (div 2 (add 1 1)) - exec two expressions and return ratio
+>>>doom
+module: (doom)
 >>>kaboom
 module: (kaboom) - kaboom stack - it is like `rm -rf`, you will lose everything
 >>>lambda

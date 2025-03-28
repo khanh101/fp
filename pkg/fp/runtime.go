@@ -4,8 +4,8 @@ import (
 	"strconv"
 )
 
-// NewPlainRuntime - runtime + core control flow extensions
-func NewPlainRuntime() *Runtime {
+// NewCoreRuntime - runtime + core control flow extensions
+func NewCoreRuntime() *Runtime {
 	return (&Runtime{
 		parseLiteral: func(lit String) (Object, error) {
 			if lit == "_" {
@@ -27,17 +27,16 @@ func NewPlainRuntime() *Runtime {
 		LoadModule("case", caseModule)
 }
 
-// NewBasicRuntime : NewPlainRuntime + minimal set of arithmetic extensions for Turing completeness
+// NewBasicRuntime : NewCoreRuntime + minimal set of arithmetic extensions for Turing completeness
 func NewBasicRuntime() *Runtime {
-	return NewPlainRuntime().
-		LoadModule("reset", resetModule).
+	return NewCoreRuntime().
 		LoadExtension("tail", tailExtension).
 		LoadExtension("add", addExtension).
 		LoadExtension("sub", subExtension).
 		LoadExtension("sign", signExtension)
 }
 
-// NewStdRuntime : NewPlainRuntime + standard functions
+// NewStdRuntime : NewCoreRuntime + standard functions
 func NewStdRuntime() *Runtime {
 	return NewBasicRuntime().
 		LoadExtension("mul", mulExtension).
@@ -51,5 +50,6 @@ func NewStdRuntime() *Runtime {
 		LoadModule("map", mapModule).
 		LoadExtension("type", typeExtension).
 		LoadModule("stack", stackModule).
-		LoadExtension("unicode", unicodeExtension)
+		LoadExtension("unicode", unicodeExtension).
+		LoadModule("reset", resetModule)
 }

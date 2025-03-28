@@ -82,7 +82,7 @@ module: (peak l 3 2) - get elem from list (can get multiple elements) (list is 1
 >>>print
 module: (print 1 x (lambda 3)) - print values
 >>>reset
-module: (reset) - reset stack
+module: (reset) - reset stack - it is like `rm -rf`, you will lose everything
 >>>sign
 module: (sign 3) - exec an expression and return the sign
 >>>slice
@@ -306,8 +306,8 @@ import (
 	"strconv"
 )
 
-// NewPlainRuntime - runtime + core control flow extensions
-func NewPlainRuntime() *Runtime {
+// NewCoreRuntime - runtime + core control flow extensions
+func NewCoreRuntime() *Runtime {
 	return (&Runtime{
 		parseLiteral: func(lit String) (Object, error) {
 			if lit == "_" {
@@ -329,17 +329,16 @@ func NewPlainRuntime() *Runtime {
 		LoadModule("case", caseModule)
 }
 
-// NewBasicRuntime : NewPlainRuntime + minimal set of arithmetic extensions for Turing completeness
+// NewBasicRuntime : NewCoreRuntime + minimal set of arithmetic extensions for Turing completeness
 func NewBasicRuntime() *Runtime {
-	return NewPlainRuntime().
-		LoadModule("reset", resetModule).
+	return NewCoreRuntime().
 		LoadExtension("tail", tailExtension).
 		LoadExtension("add", addExtension).
 		LoadExtension("sub", subExtension).
 		LoadExtension("sign", signExtension)
 }
 
-// NewStdRuntime : NewPlainRuntime + standard functions
+// NewStdRuntime : NewCoreRuntime + standard functions
 func NewStdRuntime() *Runtime {
 	return NewBasicRuntime().
 		LoadExtension("mul", mulExtension).
@@ -353,7 +352,8 @@ func NewStdRuntime() *Runtime {
 		LoadModule("map", mapModule).
 		LoadExtension("type", typeExtension).
 		LoadModule("stack", stackModule).
-		LoadExtension("unicode", unicodeExtension)
+		LoadExtension("unicode", unicodeExtension).
+		LoadModule("reset", resetModule)
 }
 ./pkg/fp/ast.go
 package fp
@@ -624,7 +624,7 @@ var resetModule = Module{
 		}
 		return nil, nil
 	},
-	Man: "module: (reset) - reset stack",
+	Man: "module: (reset) - reset stack - it is like `rm -rf`, you will lose everything",
 }
 
 var tailExtension = Extension{

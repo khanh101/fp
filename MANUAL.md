@@ -27,7 +27,7 @@ module: (peak l 3 2) - get elem from list (can get multiple elements) (list is 1
 >>>print
 module: (print 1 x (lambda 3)) - print values
 >>>reset
-module: (reset) - reset stack
+module: (reset) - reset stack - it is like `rm -rf`, you will lose everything
 >>>sign
 module: (sign 3) - exec an expression and return the sign
 >>>slice

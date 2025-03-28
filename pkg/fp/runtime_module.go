@@ -87,7 +87,7 @@ var resetModule = Module{
 		}
 		return nil, nil
 	},
-	Man: "module: (reset) - reset stack",
+	Man: "module: (reset) - reset stack - it is like `rm -rf`, you will lose everything",
 }
 
 var tailExtension = Extension{

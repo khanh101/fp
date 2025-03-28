@@ -5,11 +5,13 @@ import "fmt"
 // types - TODO implement custom data types like Int, List, Dict
 
 // Object : object union of int, Lambda, Module, List, Wildcard - TODO : introduce new data types
-type Object interface{}
+type Object interface {
+	String() string
+}
 
 func getType(o Object) String {
 	switch o.(type) {
-	case int:
+	case Int:
 		return "Int"
 	case String:
 		return "String"
@@ -24,6 +26,25 @@ func getType(o Object) String {
 	default:
 		return "unknown"
 	}
+}
+
+type Int int
+
+func (i Int) String() string {
+	return fmt.Sprintf("%d", i)
+}
+
+type Dict map[Object]Object
+
+func (d Dict) String() string {
+
+	s := ""
+	s += "{"
+	for k, v := range d {
+		s += fmt.Sprintf("%s -> %s,", k.String(), v.String())
+	}
+	s += "}"
+	return s
 }
 
 type Wildcard struct{}

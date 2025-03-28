@@ -11,7 +11,8 @@ func NewPlainRuntime() *Runtime {
 			if lit == "_" {
 				return Wildcard{}, nil
 			}
-			return strconv.Atoi(lit.String())
+			i, err := strconv.Atoi(lit.String())
+			return Int(i), err
 		},
 		Stack: []Frame{
 			make(Frame),

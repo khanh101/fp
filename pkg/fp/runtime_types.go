@@ -92,9 +92,9 @@ func (s String) MustTypeObject() struct{} {
 }
 
 type Lambda struct {
-	Params []Name `json:"params,omitempty"`
-	Impl   Expr   `json:"impl,omitempty"`
-	Frame  Frame  `json:"frame,omitempty"`
+	Params []String `json:"params,omitempty"`
+	Impl   Expr     `json:"impl,omitempty"`
+	Frame  Frame    `json:"frame,omitempty"`
 }
 
 func (l Lambda) String() string {

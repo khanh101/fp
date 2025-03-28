@@ -16,10 +16,6 @@ func (e Name) MustTypeExpr() struct{} {
 	return struct{}{}
 }
 
-func (e Name) MustTypeObject() struct{} {
-	return struct{}{}
-}
-
 // LambdaExpr : S-expression
 type LambdaExpr struct {
 	Name Name

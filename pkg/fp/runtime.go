@@ -7,7 +7,7 @@ import (
 // NewPlainRuntime - runtime + core control flow extensions
 func NewPlainRuntime() *Runtime {
 	return (&Runtime{
-		parseLiteral: func(lit Name) (Object, error) {
+		parseLiteral: func(lit String) (Object, error) {
 			if lit == "_" {
 				return Wildcard{}, nil
 			}

@@ -7,10 +7,10 @@ import (
 )
 
 type Runtime struct {
-	parseLiteral func(lit Name) (Object, error)
+	parseLiteral func(lit String) (Object, error)
 	Stack        []Frame `json:"stack,omitempty"`
 }
-type Frame map[Name]Object
+type Frame map[String]Object
 
 func (f Frame) Update(otherFrame Frame) Frame {
 	for k, v := range otherFrame {
@@ -35,12 +35,12 @@ func (r *Runtime) String() string {
 	return s
 }
 
-func (r *Runtime) LoadModule(name Name, f Module) *Runtime {
+func (r *Runtime) LoadModule(name String, f Module) *Runtime {
 	r.Stack[0][name] = f
 	return r
 }
 
-func (r *Runtime) LoadParseLiteral(f func(lit Name) (Object, error)) *Runtime {
+func (r *Runtime) LoadParseLiteral(f func(lit String) (Object, error)) *Runtime {
 	r.parseLiteral = f
 	return r
 }
@@ -50,7 +50,7 @@ type Extension struct {
 	Man  string
 }
 
-func (r *Runtime) LoadExtension(name Name, e Extension) *Runtime {
+func (r *Runtime) LoadExtension(name String, e Extension) *Runtime {
 	return r.LoadModule(name, Module{
 		Exec: func(r *Runtime, expr LambdaExpr) (Object, error) {
 			args, err := r.stepMany(expr.Args...)
@@ -85,7 +85,7 @@ func (r *Runtime) LoadExtension(name Name, e Extension) *Runtime {
 
 const DETECT_NONPURE = true
 
-func (r *Runtime) searchOnStack(name Name) (Object, error) {
+func (r *Runtime) searchOnStack(name String) (Object, error) {
 	for i := len(r.Stack) - 1; i >= 0; i-- {
 		if o, ok := r.Stack[i][name]; ok {
 			if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
@@ -104,15 +104,15 @@ func (r *Runtime) Step(expr Expr) (Object, error) {
 	case Name:
 		var v Object
 		// parse name
-		v, err := r.parseLiteral(expr)
+		v, err := r.parseLiteral(String(expr))
 		if err == nil {
 			return v, nil
 		}
 		// find in stack for variable
-		return r.searchOnStack(expr)
+		return r.searchOnStack(String(expr))
 
 	case LambdaExpr:
-		f, err := r.searchOnStack(expr.Name)
+		f, err := r.searchOnStack(String(expr.Name))
 		if err != nil {
 			return nil, err
 		}

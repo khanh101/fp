@@ -9,7 +9,7 @@ var letModule = Module{
 		if len(expr.Args) < 2 {
 			return nil, fmt.Errorf("not enough arguments for let")
 		}
-		name := expr.Args[0].(Name)
+		name := String(expr.Args[0].(Name))
 		outputs, err := r.stepMany(expr.Args[1:]...)
 		if err != nil {
 			return nil, err
@@ -25,7 +25,7 @@ var delModule = Module{
 		if len(expr.Args) < 1 {
 			return nil, fmt.Errorf("not enough arguments for del")
 		}
-		name := expr.Args[0].(Name)
+		name := String(expr.Args[0].(Name))
 		_, err := r.stepMany(expr.Args[1:]...)
 		if err != nil {
 			return nil, err
@@ -44,7 +44,7 @@ var lambdaModule = Module{
 			Frame:  nil,
 		}
 		for i := 0; i < len(expr.Args)-1; i++ {
-			paramName := expr.Args[i].(Name)
+			paramName := String(expr.Args[i].(Name))
 			v.Params = append(v.Params, paramName)
 		}
 		v.Impl = expr.Args[len(expr.Args)-1]
@@ -375,7 +375,7 @@ var stackModule = Module{
 		for _, f := range r.Stack {
 			frame := make(Dict)
 			for k, v := range f {
-				frame[k] = v
+				frame[String(k)] = v
 			}
 			stack = append(stack, frame)
 		}

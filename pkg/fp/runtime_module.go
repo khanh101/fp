@@ -94,7 +94,7 @@ var doomExtension = Extension{
 	Exec: func(object ...Object) (Object, error) {
 		return String(fmt.Sprintf("i told you - we don't have Doom yet")), nil
 	},
-	Man: "module: (doom)",
+	Man: "module: (doom) - i told you - we don't have Doom yet",
 }
 
 var tailExtension = Extension{

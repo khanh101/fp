@@ -11,7 +11,7 @@ module: (del x) - delete variable x
 >>>div
 module: (div 2 (add 1 1)) - exec two expressions and return ratio
 >>>doom
-module: (doom)
+module: (doom) - i told you - we don't have Doom yet
 >>>kaboom
 module: (kaboom) - kaboom stack - it is like `rm -rf`, you will lose everything
 >>>lambda

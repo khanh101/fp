@@ -97,7 +97,7 @@ func parseSingle(tokenList []Token) (Expr, []Token, error) {
 			return nil, nil, false, err
 		}
 		switch head {
-		case "(":
+		case "(": // start with Open
 			tokenList, funcName, err := pop(tokenList)
 			if err != nil {
 				return nil, nil, false, err
@@ -114,6 +114,7 @@ func parseSingle(tokenList []Token) (Expr, []Token, error) {
 					return nil, nil, false, err
 				}
 				if endWithClose {
+					// end with Close
 					break
 				}
 				exprList = append(exprList, expr)

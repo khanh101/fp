@@ -7,7 +7,7 @@ import (
 )
 
 type REPL interface {
-	ReplyInput(input string) (output string)
+	ReplyInput(input string, interruptCh <-chan struct{}) (output string, executed bool)
 	ClearBuffer() (output string)
 }
 
@@ -17,9 +17,9 @@ type fpRepl struct {
 	buffer  string
 }
 
-func (r *fpRepl) ReplyInput(input string) (output string) {
+func (r *fpRepl) ReplyInput(input string, interruptCh <-chan struct{}) (output string, executed bool) {
 	tokenList := fp.Tokenize(input)
-	executed := false
+	executed = false
 	if len(tokenList) == 0 {
 		executed = true
 	} else {
@@ -27,7 +27,7 @@ func (r *fpRepl) ReplyInput(input string) (output string) {
 			expr := r.parser.Input(token)
 			if expr != nil {
 				executed = true
-				output, err := r.runtime.Step(expr)
+				output, err := r.runtime.Step(expr, interruptCh)
 				if err != nil {
 					r.writeln(err.Error())
 					continue
@@ -36,16 +36,12 @@ func (r *fpRepl) ReplyInput(input string) (output string) {
 			}
 		}
 	}
-	if executed {
-		r.write(">>>")
-	}
-	return r.flush()
+	return r.flush(), executed
 }
 
 func (r *fpRepl) ClearBuffer() (output string) {
 	r.parser.Clear()
-	r.writeln(">>> (Control + C) to clear parser buffer, (Control + D) to exit")
-	r.writeln(">>>")
+	r.writeln("(Control + C) to clear parser buffer, (Control + D) to exit")
 	return r.flush()
 }
 
@@ -78,6 +74,5 @@ func NewFP(runtime *fp.Runtime) (repl REPL, welcome string) {
 		r.write("%s ", name)
 	}
 	r.writeln("")
-	r.write(">>>")
 	return r, r.flush()
 }

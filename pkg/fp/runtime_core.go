@@ -46,14 +46,14 @@ func (r *Runtime) LoadParseLiteral(f func(lit String) (Object, error)) *Runtime 
 }
 
 type Extension struct {
-	Exec func(...Object) (Object, error)
+	Exec func(<-chan struct{}, ...Object) (Object, error)
 	Man  string
 }
 
 func (r *Runtime) LoadExtension(name String, e Extension) *Runtime {
 	return r.LoadModule(name, Module{
-		Exec: func(r *Runtime, expr LambdaExpr) (Object, error) {
-			args, err := r.stepMany(expr.Args...)
+		Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
+			args, err := r.stepMany(interruptCh, expr.Args...)
 			if err != nil {
 				return nil, err
 			}
@@ -77,7 +77,7 @@ func (r *Runtime) LoadExtension(name String, e Extension) *Runtime {
 					i++
 				}
 			}
-			return e.Exec(unwrappedArgs...)
+			return e.Exec(interruptCh, unwrappedArgs...)
 		},
 		Man: e.Man,
 	})
@@ -99,59 +99,64 @@ func (r *Runtime) searchOnStack(name String) (Object, error) {
 
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
-func (r *Runtime) Step(expr Expr) (Object, error) {
-	switch expr := expr.(type) {
-	case Name:
-		var v Object
-		// parse name
-		v, err := r.parseLiteral(String(expr))
-		if err == nil {
-			return v, nil
-		}
-		// find in stack for variable
-		return r.searchOnStack(String(expr))
-
-	case LambdaExpr:
-		f, err := r.searchOnStack(String(expr.Name))
-		if err != nil {
-			return nil, err
-		}
-		switch f := f.(type) {
-		case Lambda:
-			// 1. evaluate arguments
-			args, err := r.stepMany(expr.Args...)
-			if err != nil {
-				return nil, err
-			}
-			// 2. add argument to local Frame
-			localFrame := make(Frame).Update(f.Frame)
-			for i := 0; i < len(f.Params); i++ {
-				localFrame[f.Params[i]] = args[i]
-			}
-			// 3. push Frame to Stack
-			r.Stack = append(r.Stack, localFrame)
-			// 4. exec function
-			v, err := r.Step(f.Impl)
-			if err != nil {
-				return nil, err
-			}
-			// 5. pop Frame from Stack
-			r.Stack = r.Stack[:len(r.Stack)-1]
-			return v, nil
-		case Module:
-			return f.Exec(r, expr)
-		default:
-			return nil, fmt.Errorf("function or module %s found but wrong type", expr.Name.String())
-		}
+func (r *Runtime) Step(expr Expr, interruptCh <-chan struct{}) (Object, error) {
+	select {
+	case <-interruptCh:
+		return nil, errors.New("interrupt")
 	default:
-		return nil, fmt.Errorf("runtime error: unknown expression type")
+		switch expr := expr.(type) {
+		case Name:
+			var v Object
+			// parse name
+			v, err := r.parseLiteral(String(expr))
+			if err == nil {
+				return v, nil
+			}
+			// find in stack for variable
+			return r.searchOnStack(String(expr))
+
+		case LambdaExpr:
+			f, err := r.searchOnStack(String(expr.Name))
+			if err != nil {
+				return nil, err
+			}
+			switch f := f.(type) {
+			case Lambda:
+				// 1. evaluate arguments
+				args, err := r.stepMany(interruptCh, expr.Args...)
+				if err != nil {
+					return nil, err
+				}
+				// 2. add argument to local Frame
+				localFrame := make(Frame).Update(f.Frame)
+				for i := 0; i < len(f.Params); i++ {
+					localFrame[f.Params[i]] = args[i]
+				}
+				// 3. push Frame to Stack
+				r.Stack = append(r.Stack, localFrame)
+				// 4. exec function
+				v, err := r.Step(f.Impl, interruptCh)
+				if err != nil {
+					return nil, err
+				}
+				// 5. pop Frame from Stack
+				r.Stack = r.Stack[:len(r.Stack)-1]
+				return v, nil
+			case Module:
+				return f.Exec(r, expr, interruptCh)
+			default:
+				return nil, fmt.Errorf("function or module %s found but wrong type", expr.Name.String())
+			}
+		default:
+			return nil, fmt.Errorf("runtime error: unknown expression type")
+		}
 	}
 }
 
-func (r *Runtime) stepMany(exprList ...Expr) ([]Object, error) {
+func (r *Runtime) stepMany(interruptCh <-chan struct{}, exprList ...Expr) ([]Object, error) {
 	var outputs []Object
 	for _, expr := range exprList {
-		v, err := r.Step(expr)
+		v, err := r.Step(expr, interruptCh)
 		if err != nil {
 			return nil, err
 		}

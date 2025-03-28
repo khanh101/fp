@@ -13,7 +13,7 @@ module: (div 2 (add 1 1)) - exec two expressions and return ratio
 >>>doom
 module: (doom) - i told you - we don't have Doom yet
 >>>kaboom
-module: (kaboom) - kaboom stack - it is like `rm -rf`, you will lose everything
+module: (kaboom) - remove everything except global frame
 >>>lambda
 module: (lambda x y (add x y) - declare a function
 >>>let

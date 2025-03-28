@@ -23,7 +23,7 @@ func evaluate(this js.Value, p []js.Value) interface{} {
 	input := p[0].String()
 
 	// repl here
-	output := r.ReplyInput(input)
+	output, _ := r.ReplyInput(input, nil)
 	// end repl here
 
 	output = strings.ReplaceAll(output, "\n", "<br>")

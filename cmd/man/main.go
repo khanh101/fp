@@ -25,7 +25,7 @@ func main() {
 	}
 	sort.Strings(funcNameList)
 	for _, name := range funcNameList {
-		o, err := r.Step(fp.Name(name))
+		o, err := r.Step(fp.Name(name), nil)
 		if err != nil {
 			panic(err)
 		}

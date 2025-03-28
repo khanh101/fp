@@ -68,7 +68,7 @@ module: (div 2 (add 1 1)) - exec two expressions and return ratio
 >>>doom
 module: (doom) - i told you - we don't have Doom yet
 >>>kaboom
-module: (kaboom) - kaboom stack - it is like `rm -rf`, you will lose everything
+module: (kaboom) - remove everything except global frame
 >>>lambda
 module: (lambda x y (add x y) - declare a function
 >>>let
@@ -128,7 +128,7 @@ func main() {
 	}
 	sort.Strings(funcNameList)
 	for _, name := range funcNameList {
-		o, err := r.Step(fp.Name(name))
+		o, err := r.Step(fp.Name(name), nil)
 		if err != nil {
 			panic(err)
 		}
@@ -212,10 +212,12 @@ func main() {
 package main
 
 import (
-	"bufio"
+	"errors"
 	"fmt"
 	"fp/pkg/fp"
 	"fp/pkg/repl"
+	"github.com/chzyer/readline"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -225,30 +227,55 @@ func main() {
 	repl, welcome := repl.NewFP(fp.NewStdRuntime())
 	_, _ = fmt.Fprintf(os.Stderr, welcome)
 
-	signCh := make(chan os.Signal, 1)
-	signal.Notify(signCh, syscall.SIGINT, syscall.SIGTERM)
-
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		select {
-		case s := <-signCh:
-			switch s {
-			case syscall.SIGINT:
-				output := repl.ClearBuffer()
-				_, _ = fmt.Fprintf(os.Stderr, output)
-			case syscall.SIGTERM:
-				os.Exit(0)
-			default:
-				os.Exit(1)
-			}
-		default:
-			input := scanner.Text()
-			output := repl.ReplyInput(input)
-			_, _ = fmt.Fprintf(os.Stderr, output)
-		}
-	}
-	if err := scanner.Err(); err != nil {
+	// Create a readline instance
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt:          ">>>",                  // We manually print the prompt
+		HistoryFile:     "/tmp/fp_repl_history", // Save command history
+		InterruptPrompt: "^C",
+	})
+	if err != nil {
 		panic(err)
+	}
+	defer rl.Close()
+
+	interruptCh := make(chan struct{}, 1)
+
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		for sig := range signalCh {
+			if sig == os.Interrupt {
+				select {
+				case interruptCh <- struct{}{}:
+				default:
+				}
+			} else {
+				os.Exit(0) // Exit cleanly on SIGTERM
+			}
+		}
+	}()
+
+	for {
+		line, err := rl.Readline()
+		if err != nil {
+			if errors.Is(err, readline.ErrInterrupt) { // Handle Ctrl+C
+				output := repl.ClearBuffer()
+				_, _ = fmt.Fprint(os.Stderr, output)
+				continue
+			} else if err == io.EOF { // Handle Ctrl+D (exit)
+				os.Exit(0)
+			}
+			panic(err)
+		}
+
+		output, executed := repl.ReplyInput(line, interruptCh)
+
+		if output != "" {
+			_, _ = fmt.Fprint(os.Stderr, output)
+		}
+		_ = executed
+
 	}
 }
 ./web_repl/main.go
@@ -277,7 +304,7 @@ func evaluate(this js.Value, p []js.Value) interface{} {
 	input := p[0].String()
 
 	// repl here
-	output := r.ReplyInput(input)
+	output, _ := r.ReplyInput(input, nil)
 	// end repl here
 
 	output = strings.ReplaceAll(output, "\n", "<br>")
@@ -545,12 +572,12 @@ import (
 )
 
 var letModule = Module{
-	Exec: func(r *Runtime, expr LambdaExpr) (Object, error) {
+	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
 		if len(expr.Args) < 2 {
 			return nil, fmt.Errorf("not enough arguments for let")
 		}
 		name := String(expr.Args[0].(Name))
-		outputs, err := r.stepMany(expr.Args[1:]...)
+		outputs, err := r.stepMany(interruptCh, expr.Args[1:]...)
 		if err != nil {
 			return nil, err
 		}
@@ -561,12 +588,12 @@ var letModule = Module{
 }
 
 var delModule = Module{
-	Exec: func(r *Runtime, expr LambdaExpr) (Object, error) {
+	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
 		if len(expr.Args) < 1 {
 			return nil, fmt.Errorf("not enough arguments for del")
 		}
 		name := String(expr.Args[0].(Name))
-		_, err := r.stepMany(expr.Args[1:]...)
+		_, err := r.stepMany(interruptCh, expr.Args[1:]...)
 		if err != nil {
 			return nil, err
 		}
@@ -577,7 +604,7 @@ var delModule = Module{
 }
 
 var lambdaModule = Module{
-	Exec: func(r *Runtime, expr LambdaExpr) (Object, error) {
+	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
 		v := Lambda{
 			Params: nil,
 			Impl:   nil,
@@ -595,14 +622,14 @@ var lambdaModule = Module{
 }
 
 var caseModule = Module{
-	Exec: func(r *Runtime, expr LambdaExpr) (Object, error) {
-		cond, err := r.Step(expr.Args[0])
+	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
+		cond, err := r.Step(expr.Args[0], interruptCh)
 		if err != nil {
 			return nil, err
 		}
 		i, err := func() (int, error) {
 			for i := 1; i < len(expr.Args); i += 2 {
-				comp, err := r.Step(expr.Args[i])
+				comp, err := r.Step(expr.Args[i], interruptCh)
 				if err != nil {
 					return 0, err
 				}
@@ -615,37 +642,35 @@ var caseModule = Module{
 		if err != nil {
 			return nil, err
 		}
-		return r.Step(expr.Args[i+1])
+		return r.Step(expr.Args[i+1], interruptCh)
 	},
 	Man: "module: (case x 1 2 4 5) - case, if x=1 then return 3, if x=4 the return 5",
 }
 
 var kaboomModule = Module{
-	Exec: func(r *Runtime, expr LambdaExpr) (Object, error) {
-		r.Stack = []Frame{
-			make(Frame),
-		}
+	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
+		r.Stack = r.Stack[0:1]
 		return nil, nil
 	},
-	Man: "module: (kaboom) - kaboom stack - it is like `rm -rf`, you will lose everything",
+	Man: "module: (kaboom) - remove everything except global frame",
 }
 
 var doomExtension = Extension{
-	Exec: func(object ...Object) (Object, error) {
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		return String(fmt.Sprintf("i told you - we don't have Doom yet")), nil
 	},
 	Man: "module: (doom) - i told you - we don't have Doom yet",
 }
 
 var tailExtension = Extension{
-	Exec: func(values ...Object) (Object, error) {
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		return values[len(values)-1], nil
 	},
 	Man: "module: (tail (print 1) (print 2) 3) - exec a sequence of expressions and return the last one",
 }
 
 var addExtension = Extension{
-	Exec: func(values ...Object) (Object, error) {
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		var sum Int = 0
 		for i := 0; i < len(values); i++ {
 			v, ok := values[i].(Int)
@@ -660,7 +685,7 @@ var addExtension = Extension{
 }
 
 var mulExtension = Extension{
-	Exec: func(values ...Object) (Object, error) {
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		var sum Int = 1
 		for i := 0; i < len(values); i++ {
 			v, ok := values[i].(Int)
@@ -675,7 +700,7 @@ var mulExtension = Extension{
 }
 
 var subExtension = Extension{
-	Exec: func(values ...Object) (Object, error) {
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		if len(values) != 2 {
 			return nil, fmt.Errorf("subtract requires 2 arguments")
 		}
@@ -693,7 +718,7 @@ var subExtension = Extension{
 }
 
 var divExtension = Extension{
-	Exec: func(values ...Object) (Object, error) {
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		if len(values) != 2 {
 			return nil, fmt.Errorf("dividing requires 2 arguments")
 		}
@@ -714,7 +739,7 @@ var divExtension = Extension{
 }
 
 var modExtension = Extension{
-	Exec: func(values ...Object) (Object, error) {
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		if len(values) != 2 {
 			return nil, fmt.Errorf("dividing requires 2 arguments")
 		}
@@ -735,7 +760,7 @@ var modExtension = Extension{
 }
 
 var signExtension = Extension{
-	Exec: func(values ...Object) (Object, error) {
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		v, ok := values[len(values)-1].(Int)
 		if !ok {
 			return nil, fmt.Errorf("sign non-integer value")
@@ -753,7 +778,7 @@ var signExtension = Extension{
 }
 
 var listExtension = Extension{
-	Exec: func(values ...Object) (Object, error) {
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		var l List
 		for _, v := range values {
 			l = append(l, v)
@@ -764,7 +789,7 @@ var listExtension = Extension{
 }
 
 var appendExtension = Extension{
-	Exec: func(values ...Object) (Object, error) {
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		l, ok := values[0].(List)
 		if !ok {
 			return nil, fmt.Errorf("first argument must be list")
@@ -775,7 +800,7 @@ var appendExtension = Extension{
 }
 
 var sliceExtension = Extension{
-	Exec: func(values ...Object) (Object, error) {
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		if len(values) != 3 {
 			return nil, fmt.Errorf("slice requires 3 arguments")
 		}
@@ -804,7 +829,7 @@ var sliceExtension = Extension{
 }
 
 var peakExtension = Extension{
-	Exec: func(values ...Object) (Object, error) {
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		if len(values) < 2 {
 			return nil, fmt.Errorf("peak requires at least 2 arguments")
 		}
@@ -836,11 +861,11 @@ var peakExtension = Extension{
 }
 
 var mapModule = Module{
-	Exec: func(r *Runtime, expr LambdaExpr) (Object, error) {
+	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
 		if len(expr.Args) != 2 {
 			return nil, fmt.Errorf("map requires 2 arguments")
 		}
-		l1, err := r.Step(expr.Args[0])
+		l1, err := r.Step(expr.Args[0], interruptCh)
 		if err != nil {
 			return nil, err
 		}
@@ -848,7 +873,7 @@ var mapModule = Module{
 		if !ok {
 			return nil, fmt.Errorf("first argument must be list")
 		}
-		f1, err := r.Step(expr.Args[1])
+		f1, err := r.Step(expr.Args[1], interruptCh)
 		if err != nil {
 			return nil, err
 		}
@@ -865,7 +890,7 @@ var mapModule = Module{
 				// 3. push Frame to Stack
 				r.Stack = append(r.Stack, localFrame)
 				// 4. exec function
-				o, err := r.Step(f.Impl)
+				o, err := r.Step(f.Impl, interruptCh)
 				// 5. pop Frame from Stack
 				r.Stack = r.Stack[:len(r.Stack)-1]
 				// 6. append o
@@ -883,7 +908,7 @@ var mapModule = Module{
 				o, err := f.Exec(r, LambdaExpr{
 					Name: "",
 					Args: []Expr{Name("x")}, // dummy variable
-				})
+				}, interruptCh)
 				// 5. pop Frame from Stack
 				r.Stack = r.Stack[:len(r.Stack)-1]
 				// 6. append o
@@ -903,7 +928,7 @@ var mapModule = Module{
 // TODO - implement map filter reduce
 
 var typeExtension = Extension{
-	Exec: func(values ...Object) (Object, error) {
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		var types List
 		for _, v := range values {
 			types = append(types, getType(v))
@@ -917,7 +942,7 @@ var typeExtension = Extension{
 }
 
 var stackModule = Module{
-	Exec: func(r *Runtime, expr LambdaExpr) (Object, error) {
+	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
 		var stack List
 		for _, f := range r.Stack {
 			frame := make(Dict)
@@ -932,7 +957,7 @@ var stackModule = Module{
 }
 
 var printExtension = Extension{
-	Exec: func(values ...Object) (Object, error) {
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		for _, v := range values {
 			fmt.Printf("%v ", v)
 		}
@@ -943,7 +968,7 @@ var printExtension = Extension{
 }
 
 var unicodeExtension = Extension{
-	Exec: func(values ...Object) (Object, error) {
+	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 
 		var output String = ""
 		for _, v := range values {
@@ -1006,14 +1031,14 @@ func (r *Runtime) LoadParseLiteral(f func(lit String) (Object, error)) *Runtime 
 }
 
 type Extension struct {
-	Exec func(...Object) (Object, error)
+	Exec func(<-chan struct{}, ...Object) (Object, error)
 	Man  string
 }
 
 func (r *Runtime) LoadExtension(name String, e Extension) *Runtime {
 	return r.LoadModule(name, Module{
-		Exec: func(r *Runtime, expr LambdaExpr) (Object, error) {
-			args, err := r.stepMany(expr.Args...)
+		Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
+			args, err := r.stepMany(interruptCh, expr.Args...)
 			if err != nil {
 				return nil, err
 			}
@@ -1037,7 +1062,7 @@ func (r *Runtime) LoadExtension(name String, e Extension) *Runtime {
 					i++
 				}
 			}
-			return e.Exec(unwrappedArgs...)
+			return e.Exec(interruptCh, unwrappedArgs...)
 		},
 		Man: e.Man,
 	})
@@ -1059,59 +1084,64 @@ func (r *Runtime) searchOnStack(name String) (Object, error) {
 
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
-func (r *Runtime) Step(expr Expr) (Object, error) {
-	switch expr := expr.(type) {
-	case Name:
-		var v Object
-		// parse name
-		v, err := r.parseLiteral(String(expr))
-		if err == nil {
-			return v, nil
-		}
-		// find in stack for variable
-		return r.searchOnStack(String(expr))
-
-	case LambdaExpr:
-		f, err := r.searchOnStack(String(expr.Name))
-		if err != nil {
-			return nil, err
-		}
-		switch f := f.(type) {
-		case Lambda:
-			// 1. evaluate arguments
-			args, err := r.stepMany(expr.Args...)
-			if err != nil {
-				return nil, err
-			}
-			// 2. add argument to local Frame
-			localFrame := make(Frame).Update(f.Frame)
-			for i := 0; i < len(f.Params); i++ {
-				localFrame[f.Params[i]] = args[i]
-			}
-			// 3. push Frame to Stack
-			r.Stack = append(r.Stack, localFrame)
-			// 4. exec function
-			v, err := r.Step(f.Impl)
-			if err != nil {
-				return nil, err
-			}
-			// 5. pop Frame from Stack
-			r.Stack = r.Stack[:len(r.Stack)-1]
-			return v, nil
-		case Module:
-			return f.Exec(r, expr)
-		default:
-			return nil, fmt.Errorf("function or module %s found but wrong type", expr.Name.String())
-		}
+func (r *Runtime) Step(expr Expr, interruptCh <-chan struct{}) (Object, error) {
+	select {
+	case <-interruptCh:
+		return nil, errors.New("interrupt")
 	default:
-		return nil, fmt.Errorf("runtime error: unknown expression type")
+		switch expr := expr.(type) {
+		case Name:
+			var v Object
+			// parse name
+			v, err := r.parseLiteral(String(expr))
+			if err == nil {
+				return v, nil
+			}
+			// find in stack for variable
+			return r.searchOnStack(String(expr))
+
+		case LambdaExpr:
+			f, err := r.searchOnStack(String(expr.Name))
+			if err != nil {
+				return nil, err
+			}
+			switch f := f.(type) {
+			case Lambda:
+				// 1. evaluate arguments
+				args, err := r.stepMany(interruptCh, expr.Args...)
+				if err != nil {
+					return nil, err
+				}
+				// 2. add argument to local Frame
+				localFrame := make(Frame).Update(f.Frame)
+				for i := 0; i < len(f.Params); i++ {
+					localFrame[f.Params[i]] = args[i]
+				}
+				// 3. push Frame to Stack
+				r.Stack = append(r.Stack, localFrame)
+				// 4. exec function
+				v, err := r.Step(f.Impl, interruptCh)
+				if err != nil {
+					return nil, err
+				}
+				// 5. pop Frame from Stack
+				r.Stack = r.Stack[:len(r.Stack)-1]
+				return v, nil
+			case Module:
+				return f.Exec(r, expr, interruptCh)
+			default:
+				return nil, fmt.Errorf("function or module %s found but wrong type", expr.Name.String())
+			}
+		default:
+			return nil, fmt.Errorf("runtime error: unknown expression type")
+		}
 	}
 }
 
-func (r *Runtime) stepMany(exprList ...Expr) ([]Object, error) {
+func (r *Runtime) stepMany(interruptCh <-chan struct{}, exprList ...Expr) ([]Object, error) {
 	var outputs []Object
 	for _, expr := range exprList {
-		v, err := r.Step(expr)
+		v, err := r.Step(expr, interruptCh)
 		if err != nil {
 			return nil, err
 		}
@@ -1234,7 +1264,7 @@ func (l Lambda) MustTypeObject() struct{} {
 }
 
 type Module struct {
-	Exec func(r *Runtime, expr LambdaExpr) (Object, error)
+	Exec func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error)
 	Man  string `json:"man,omitempty"`
 }
 
@@ -1271,7 +1301,7 @@ import (
 )
 
 type REPL interface {
-	ReplyInput(input string) (output string)
+	ReplyInput(input string, interruptCh <-chan struct{}) (output string, executed bool)
 	ClearBuffer() (output string)
 }
 
@@ -1281,9 +1311,9 @@ type fpRepl struct {
 	buffer  string
 }
 
-func (r *fpRepl) ReplyInput(input string) (output string) {
+func (r *fpRepl) ReplyInput(input string, interruptCh <-chan struct{}) (output string, executed bool) {
 	tokenList := fp.Tokenize(input)
-	executed := false
+	executed = false
 	if len(tokenList) == 0 {
 		executed = true
 	} else {
@@ -1291,7 +1321,7 @@ func (r *fpRepl) ReplyInput(input string) (output string) {
 			expr := r.parser.Input(token)
 			if expr != nil {
 				executed = true
-				output, err := r.runtime.Step(expr)
+				output, err := r.runtime.Step(expr, interruptCh)
 				if err != nil {
 					r.writeln(err.Error())
 					continue
@@ -1300,16 +1330,12 @@ func (r *fpRepl) ReplyInput(input string) (output string) {
 			}
 		}
 	}
-	if executed {
-		r.write(">>>")
-	}
-	return r.flush()
+	return r.flush(), executed
 }
 
 func (r *fpRepl) ClearBuffer() (output string) {
 	r.parser.Clear()
-	r.writeln(">>> (Control + C) to clear parser buffer, (Control + D) to exit")
-	r.writeln(">>>")
+	r.writeln("(Control + C) to clear parser buffer, (Control + D) to exit")
 	return r.flush()
 }
 
@@ -1342,7 +1368,6 @@ func NewFP(runtime *fp.Runtime) (repl REPL, welcome string) {
 		r.write("%s ", name)
 	}
 	r.writeln("")
-	r.write(">>>")
 	return r, r.flush()
 }
 ./example.lisp

@@ -227,6 +227,9 @@ import (
 func NewPlainRuntime() *Runtime {
 	return (&Runtime{
 		parseLiteral: func(lit Name) (Object, error) {
+			if lit == "_" {
+				return Wildcard{}, nil
+			}
 			return strconv.Atoi(lit.String())
 		},
 		Stack: []Frame{
@@ -482,14 +485,11 @@ var caseModule = Module{
 		}
 		i, err := func() (int, error) {
 			for i := 1; i < len(expr.Args); i += 2 {
-				if arg, ok := expr.Args[i].(Name); ok && arg == "_" {
-					return i, nil
-				}
 				comp, err := r.Step(expr.Args[i])
 				if err != nil {
 					return 0, err
 				}
-				if comp == cond {
+				if _, ok := comp.(Wildcard); ok || comp == cond {
 					return i, nil
 				}
 			}
@@ -970,7 +970,7 @@ import "fmt"
 
 // types - TODO implement custom data types like Int, List, Dict
 
-// Object : object union of int, Lambda, Module, List - TODO : introduce new data types
+// Object : object union of int, Lambda, Module, List, Wildcard - TODO : introduce new data types
 type Object interface{}
 
 func getType(o Object) String {
@@ -985,9 +985,17 @@ func getType(o Object) String {
 		return "Module"
 	case List:
 		return "List"
+	case Wildcard:
+		return "wildcard"
 	default:
 		return "unknown"
 	}
+}
+
+type Wildcard struct{}
+
+func (w Wildcard) String() string {
+	return "_"
 }
 
 type String string
@@ -1196,12 +1204,12 @@ func NewFP() (repl REPL, welcome string) {
 
 // define fibonacci
 
-(let fibonacci
+(let fib
     (lambda x
         (case (sign (sub x 1))
             1 (tail
-                (let y (fibonacci (sub x 1)))
-                (let z (fibonacci (sub x 2)))
+                (let y (fib (sub x 1)))
+                (let z (fib (sub x 2)))
                 (add y z)
             )
             _ x
@@ -1209,7 +1217,7 @@ func NewFP() (repl REPL, welcome string) {
     )
 )
 
-(print (fibonacci 20) 11)                                // print the 20-th fibonacci
+(print (fib 20) 11)                                // print the 20-th fibonacci
 
 // test map on list
 (let x (list 1 2 3))

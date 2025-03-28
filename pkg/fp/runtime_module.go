@@ -62,14 +62,11 @@ var caseModule = Module{
 		}
 		i, err := func() (int, error) {
 			for i := 1; i < len(expr.Args); i += 2 {
-				if arg, ok := expr.Args[i].(Name); ok && arg == "_" {
-					return i, nil
-				}
 				comp, err := r.Step(expr.Args[i])
 				if err != nil {
 					return 0, err
 				}
-				if comp == cond {
+				if _, ok := comp.(Wildcard); ok || comp == cond {
 					return i, nil
 				}
 			}

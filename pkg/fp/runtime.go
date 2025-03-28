@@ -8,6 +8,9 @@ import (
 func NewPlainRuntime() *Runtime {
 	return (&Runtime{
 		parseLiteral: func(lit Name) (Object, error) {
+			if lit == "_" {
+				return Wildcard{}, nil
+			}
 			return strconv.Atoi(lit.String())
 		},
 		Stack: []Frame{

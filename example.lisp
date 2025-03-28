@@ -77,12 +77,12 @@
 
 // define fibonacci
 
-(let fibonacci
+(let fib
     (lambda x
         (case (sign (sub x 1))
             1 (tail
-                (let y (fibonacci (sub x 1)))
-                (let z (fibonacci (sub x 2)))
+                (let y (fib (sub x 1)))
+                (let z (fib (sub x 2)))
                 (add y z)
             )
             _ x
@@ -90,7 +90,7 @@
     )
 )
 
-(print (fibonacci 20) 11)                                // print the 20-th fibonacci
+(print (fib 20) 11)                                // print the 20-th fibonacci
 
 // test map on list
 (let x (list 1 2 3))

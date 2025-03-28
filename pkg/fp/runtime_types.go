@@ -4,7 +4,7 @@ import "fmt"
 
 // types - TODO implement custom data types like Int, List, Dict
 
-// Object : object union of int, Lambda, Module, List - TODO : introduce new data types
+// Object : object union of int, Lambda, Module, List, Wildcard - TODO : introduce new data types
 type Object interface{}
 
 func getType(o Object) String {
@@ -19,9 +19,17 @@ func getType(o Object) String {
 		return "Module"
 	case List:
 		return "List"
+	case Wildcard:
+		return "wildcard"
 	default:
 		return "unknown"
 	}
+}
+
+type Wildcard struct{}
+
+func (w Wildcard) String() string {
+	return "_"
 }
 
 type String string

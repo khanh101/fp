@@ -7,6 +7,7 @@ import "fmt"
 // Object : union - TODO : introduce new data types
 type Object interface {
 	String() string
+	AssertObject() struct{} // for type-safety
 }
 
 func getType(o Object) String {
@@ -39,6 +40,10 @@ func (i Int) String() string {
 	return fmt.Sprintf("%d", i)
 }
 
+func (i Int) AssertObject() struct{} {
+	return struct{}{}
+}
+
 type Dict map[Object]Object
 
 func (d Dict) String() string {
@@ -52,10 +57,18 @@ func (d Dict) String() string {
 	return s
 }
 
+func (d Dict) AssertObject() struct{} {
+	return struct{}{}
+}
+
 type Unwrap struct{}
 
 func (u Unwrap) String() string {
 	return "*"
+}
+
+func (u Unwrap) AssertObject() struct{} {
+	return struct{}{}
 }
 
 type Wildcard struct{}
@@ -64,10 +77,18 @@ func (w Wildcard) String() string {
 	return "_"
 }
 
+func (w Wildcard) AssertObject() struct{} {
+	return struct{}{}
+}
+
 type String string
 
 func (s String) String() string {
 	return string(s)
+}
+
+func (s String) AssertObject() struct{} {
+	return struct{}{}
 }
 
 type Lambda struct {
@@ -86,6 +107,10 @@ func (l Lambda) String() string {
 	return s
 }
 
+func (l Lambda) AssertObject() struct{} {
+	return struct{}{}
+}
+
 type Module struct {
 	Exec func(r *Runtime, expr LambdaExpr) (Object, error)
 	Man  string `json:"man,omitempty"`
@@ -93,6 +118,10 @@ type Module struct {
 
 func (m Module) String() string {
 	return m.Man
+}
+
+func (m Module) AssertObject() struct{} {
+	return struct{}{}
 }
 
 type List []Object
@@ -105,4 +134,8 @@ func (l List) String() string {
 	}
 	s += "]"
 	return s
+}
+
+func (l List) AssertObject() struct{} {
+	return struct{}{}
 }

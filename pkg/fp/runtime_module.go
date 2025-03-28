@@ -97,7 +97,7 @@ var tailExtension = Extension{
 	Exec: func(values ...Object) (Object, error) {
 		return values[len(values)-1], nil
 	},
-	Man: "extension: (tail (print 1) (print 2) 3) - exec a sequence of expressions and return the last one",
+	Man: "module: (tail (print 1) (print 2) 3) - exec a sequence of expressions and return the last one",
 }
 
 var addExtension = Extension{
@@ -112,7 +112,7 @@ var addExtension = Extension{
 		}
 		return sum, nil
 	},
-	Man: "extension: (add 1 (add 2 3) 3) - exec a sequence of expressions and return the sum",
+	Man: "module: (add 1 (add 2 3) 3) - exec a sequence of expressions and return the sum",
 }
 
 var mulExtension = Extension{
@@ -127,7 +127,7 @@ var mulExtension = Extension{
 		}
 		return sum, nil
 	},
-	Man: "extension: (mul 1 (add 2 3) 3) - exec a sequence of expressions and return the product",
+	Man: "module: (mul 1 (add 2 3) 3) - exec a sequence of expressions and return the product",
 }
 
 var subExtension = Extension{
@@ -145,7 +145,7 @@ var subExtension = Extension{
 		}
 		return a - b, nil
 	},
-	Man: "extension: (sub 2 (add 1 1)) - exec two expressions and return difference",
+	Man: "module: (sub 2 (add 1 1)) - exec two expressions and return difference",
 }
 
 var divExtension = Extension{
@@ -166,7 +166,7 @@ var divExtension = Extension{
 		}
 		return a / b, nil
 	},
-	Man: "extension: (div 2 (add 1 1)) - exec two expressions and return ratio",
+	Man: "module: (div 2 (add 1 1)) - exec two expressions and return ratio",
 }
 
 var modExtension = Extension{
@@ -187,7 +187,7 @@ var modExtension = Extension{
 		}
 		return a % b, nil
 	},
-	Man: "extension: (mod 2 (add 1 1)) - exec two expressions and return modulo",
+	Man: "module: (mod 2 (add 1 1)) - exec two expressions and return modulo",
 }
 
 var signExtension = Extension{
@@ -205,7 +205,7 @@ var signExtension = Extension{
 			return 0, nil
 		}
 	},
-	Man: "extension: (sign 3) - exec an expression and return the sign",
+	Man: "module: (sign 3) - exec an expression and return the sign",
 }
 
 var listExtension = Extension{
@@ -216,7 +216,7 @@ var listExtension = Extension{
 		}
 		return l, nil
 	},
-	Man: "extension: (list 1 2 (lambda x (add x 1))) - make a list",
+	Man: "module: (list 1 2 (lambda x (add x 1))) - make a list",
 }
 
 var appendExtension = Extension{
@@ -227,7 +227,7 @@ var appendExtension = Extension{
 		}
 		return append(l, values[1:]...), nil
 	},
-	Man: "extension: (append l 2 (add 1 1)) - append elements into list l and return a new list",
+	Man: "module: (append l 2 (add 1 1)) - append elements into list l and return a new list",
 }
 
 var sliceExtension = Extension{
@@ -250,9 +250,12 @@ var sliceExtension = Extension{
 		if !ok {
 			return nil, fmt.Errorf("third argument must be integer")
 		}
-		return l[i:j], nil
+		if i-1 < 0 || i-1 >= len(l) || j-1 < 0 || j-1 >= len(l) {
+			return nil, fmt.Errorf("list is out of range")
+		}
+		return l[i-1 : j-1], nil
 	},
-	Man: "extension: (slice l 2 3) - make a slice of a list l[2, 3]",
+	Man: "module: (slice l 2 3) - make a slice of a list l[2, 3] (list is 1-indexing and slice is a closed interval)",
 }
 
 var peakExtension = Extension{
@@ -269,7 +272,10 @@ var peakExtension = Extension{
 		}
 		var outputs List
 		for j := 1; j < len(values); j++ {
-			i, ok := values[j].(int)
+			if j-1 < 0 || j-1 >= len(l) {
+				return nil, fmt.Errorf("list is out of range")
+			}
+			i, ok := values[j-1].(int)
 			if !ok {
 				return nil, fmt.Errorf("second argument must be integer")
 			}
@@ -280,7 +286,7 @@ var peakExtension = Extension{
 		}
 		return outputs, nil
 	},
-	Man: "extension: (peak l 3 2) - get elem from list (can get multiple elements)",
+	Man: "module: (peak l 3 2) - get elem from list (can get multiple elements) (list is 1-indexing)",
 }
 
 var mapModule = Module{
@@ -345,7 +351,7 @@ var mapModule = Module{
 		}
 		return outputs, nil
 	},
-	Man: "extension: (map l (lambda y (add 1 y))) - map",
+	Man: "module: (map l (lambda y (add 1 y))) - map",
 }
 
 // TODO - implement map filter reduce
@@ -361,7 +367,7 @@ var typeExtension = Extension{
 		}
 		return types, nil
 	},
-	Man: "extension: (type x 1 (lambda y (add 1 y))) - get types of objects (can get multiple ones)",
+	Man: "module: (type x 1 (lambda y (add 1 y))) - get types of objects (can get multiple ones)",
 }
 
 var stackModule = Module{
@@ -379,7 +385,7 @@ var printExtension = Extension{
 		fmt.Println()
 		return len(values), nil
 	},
-	Man: "extension: (print 1 x (lambda 3)) - print values",
+	Man: "module: (print 1 x (lambda 3)) - print values",
 }
 
 var unicodeExtension = Extension{
@@ -394,5 +400,5 @@ var unicodeExtension = Extension{
 		}
 		return output, nil
 	},
-	Man: "extension: (unicode 72 101 108 108 111 44 32 87 111 114 108 100 33) - convert a list of integers into string - this is just for hello world",
+	Man: "module: (unicode 72 101 108 108 111 44 32 87 111 114 108 100 33) - convert a list of integers into string - this is just for hello world",
 }

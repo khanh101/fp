@@ -54,9 +54,9 @@ no 😅
 ```lisp
 welcome to fp repl! type <function or module name> for help
 >>>add
-extension: (add 1 (add 2 3) 3) - exec a sequence of expressions and return the sum
+module: (add 1 (add 2 3) 3) - exec a sequence of expressions and return the sum
 >>>append
-extension: (append l 2 (add 1 1)) - append elements into list l and return a new list
+module: (append l 2 (add 1 1)) - append elements into list l and return a new list
 >>>case
 module: (case x 1 2 4 5) - case, if x=1 then return 3, if x=4 the return 5
 >>>del
@@ -68,33 +68,33 @@ module: (lambda x y (add x y) - declare a function
 >>>let
 module: (let x 3) - assign value 3 to local variable x
 >>>list
-extension: (list 1 2 (lambda x (add x 1))) - make a list
+module: (list 1 2 (lambda x (add x 1))) - make a list
 >>>map
-extension: (map l (lambda y (add 1 y))) - map
+module: (map l (lambda y (add 1 y))) - map
 >>>mod
-extension: (mod 2 (add 1 1)) - exec two expressions and return modulo
+module: (mod 2 (add 1 1)) - exec two expressions and return modulo
 >>>mul
-extension: (mul 1 (add 2 3) 3) - exec a sequence of expressions and return the product
+module: (mul 1 (add 2 3) 3) - exec a sequence of expressions and return the product
 >>>peak
-extension: (peak l 3 2) - get elem from list (can get multiple elements)
+module: (peak l 3 2) - get elem from list (can get multiple elements) (list is 1-indexing)
 >>>print
-extension: (print 1 x (lambda 3)) - print values
+module: (print 1 x (lambda 3)) - print values
 >>>reset
 module: (reset) - reset stack
 >>>sign
-extension: (sign 3) - exec an expression and return the sign
+module: (sign 3) - exec an expression and return the sign
 >>>slice
-extension: (slice l 2 3) - make a slice of a list l[2, 3]
+module: (slice l 2 3) - make a slice of a list l[2, 3] (list is 1-indexing and slice is a closed interval)
 >>>stack
 module: (stack) - get stack
 >>>sub
-extension: (sub 2 (add 1 1)) - exec two expressions and return difference
+module: (sub 2 (add 1 1)) - exec two expressions and return difference
 >>>tail
-extension: (tail (print 1) (print 2) 3) - exec a sequence of expressions and return the last one
+module: (tail (print 1) (print 2) 3) - exec a sequence of expressions and return the last one
 >>>type
-extension: (type x 1 (lambda y (add 1 y))) - get types of objects (can get multiple ones)
+module: (type x 1 (lambda y (add 1 y))) - get types of objects (can get multiple ones)
 >>>unicode
-extension: (unicode 72 101 108 108 111 44 32 87 111 114 108 100 33) - convert a list of integers into string - this is just for hello world
+module: (unicode 72 101 108 108 111 44 32 87 111 114 108 100 33) - convert a list of integers into string - this is just for hello world
 ```
 ./cmd/man/main.go
 package main
@@ -235,90 +235,6 @@ func main() {
 	js.Global().Set("evaluate", js.FuncOf(evaluate))
 	// Keep WebAssembly running
 	select {}
-}
-./pkg/fp/runtime_step.go
-package fp
-
-import (
-	"fmt"
-	"os"
-)
-
-const DETECT_NONPURE = true
-
-func (r *Runtime) searchOnStack(name Name) (Object, error) {
-	for i := len(r.Stack) - 1; i >= 0; i-- {
-		if o, ok := r.Stack[i][name]; ok {
-			if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
-				_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
-			}
-			return o, nil
-		}
-	}
-	return nil, fmt.Errorf("object not found %s", name)
-}
-
-// Step - implement minimal set of instructions for the language to be Turing complete
-// let, Lambda, case, sign, sub, add, tail
-func (r *Runtime) Step(expr Expr) (Object, error) {
-	switch expr := expr.(type) {
-	case Name:
-		var v Object
-		// parse name
-		v, err := r.parseLiteral(expr)
-		if err == nil {
-			return v, nil
-		}
-		// find in stack for variable
-		return r.searchOnStack(expr)
-
-	case LambdaExpr:
-		f, err := r.searchOnStack(expr.Name)
-		if err != nil {
-			return nil, err
-		}
-		switch f := f.(type) {
-		case Lambda:
-			// 1. evaluate arguments
-			args, err := r.stepMany(expr.Args...)
-			if err != nil {
-				return nil, err
-			}
-			// 2. add argument to local Frame
-			localFrame := make(Frame).Update(f.Frame)
-			for i := 0; i < len(f.Params); i++ {
-				localFrame[f.Params[i]] = args[i]
-			}
-			// 3. push Frame to Stack
-			r.Stack = append(r.Stack, localFrame)
-			// 4. exec function
-			v, err := r.Step(f.Impl)
-			if err != nil {
-				return nil, err
-			}
-			// 5. pop Frame from Stack
-			r.Stack = r.Stack[:len(r.Stack)-1]
-			return v, nil
-		case Module:
-			return f.Exec(r, expr)
-		default:
-			return nil, fmt.Errorf("function or module %s found but wrong type", expr.Name.String())
-		}
-	default:
-		return nil, fmt.Errorf("runtime error: unknown expression type")
-	}
-}
-
-func (r *Runtime) stepMany(exprList ...Expr) ([]Object, error) {
-	var outputs []Object
-	for _, expr := range exprList {
-		v, err := r.Step(expr)
-		if err != nil {
-			return nil, err
-		}
-		outputs = append(outputs, v)
-	}
-	return outputs, nil
 }
 ./pkg/fp/runtime.go
 package fp
@@ -621,7 +537,7 @@ var tailExtension = Extension{
 	Exec: func(values ...Object) (Object, error) {
 		return values[len(values)-1], nil
 	},
-	Man: "extension: (tail (print 1) (print 2) 3) - exec a sequence of expressions and return the last one",
+	Man: "module: (tail (print 1) (print 2) 3) - exec a sequence of expressions and return the last one",
 }
 
 var addExtension = Extension{
@@ -636,7 +552,7 @@ var addExtension = Extension{
 		}
 		return sum, nil
 	},
-	Man: "extension: (add 1 (add 2 3) 3) - exec a sequence of expressions and return the sum",
+	Man: "module: (add 1 (add 2 3) 3) - exec a sequence of expressions and return the sum",
 }
 
 var mulExtension = Extension{
@@ -651,7 +567,7 @@ var mulExtension = Extension{
 		}
 		return sum, nil
 	},
-	Man: "extension: (mul 1 (add 2 3) 3) - exec a sequence of expressions and return the product",
+	Man: "module: (mul 1 (add 2 3) 3) - exec a sequence of expressions and return the product",
 }
 
 var subExtension = Extension{
@@ -669,7 +585,7 @@ var subExtension = Extension{
 		}
 		return a - b, nil
 	},
-	Man: "extension: (sub 2 (add 1 1)) - exec two expressions and return difference",
+	Man: "module: (sub 2 (add 1 1)) - exec two expressions and return difference",
 }
 
 var divExtension = Extension{
@@ -690,7 +606,7 @@ var divExtension = Extension{
 		}
 		return a / b, nil
 	},
-	Man: "extension: (div 2 (add 1 1)) - exec two expressions and return ratio",
+	Man: "module: (div 2 (add 1 1)) - exec two expressions and return ratio",
 }
 
 var modExtension = Extension{
@@ -711,7 +627,7 @@ var modExtension = Extension{
 		}
 		return a % b, nil
 	},
-	Man: "extension: (mod 2 (add 1 1)) - exec two expressions and return modulo",
+	Man: "module: (mod 2 (add 1 1)) - exec two expressions and return modulo",
 }
 
 var signExtension = Extension{
@@ -729,7 +645,7 @@ var signExtension = Extension{
 			return 0, nil
 		}
 	},
-	Man: "extension: (sign 3) - exec an expression and return the sign",
+	Man: "module: (sign 3) - exec an expression and return the sign",
 }
 
 var listExtension = Extension{
@@ -740,7 +656,7 @@ var listExtension = Extension{
 		}
 		return l, nil
 	},
-	Man: "extension: (list 1 2 (lambda x (add x 1))) - make a list",
+	Man: "module: (list 1 2 (lambda x (add x 1))) - make a list",
 }
 
 var appendExtension = Extension{
@@ -751,7 +667,7 @@ var appendExtension = Extension{
 		}
 		return append(l, values[1:]...), nil
 	},
-	Man: "extension: (append l 2 (add 1 1)) - append elements into list l and return a new list",
+	Man: "module: (append l 2 (add 1 1)) - append elements into list l and return a new list",
 }
 
 var sliceExtension = Extension{
@@ -774,9 +690,12 @@ var sliceExtension = Extension{
 		if !ok {
 			return nil, fmt.Errorf("third argument must be integer")
 		}
-		return l[i:j], nil
+		if i-1 < 0 || i-1 >= len(l) || j-1 < 0 || j-1 >= len(l) {
+			return nil, fmt.Errorf("list is out of range")
+		}
+		return l[i-1 : j-1], nil
 	},
-	Man: "extension: (slice l 2 3) - make a slice of a list l[2, 3]",
+	Man: "module: (slice l 2 3) - make a slice of a list l[2, 3] (list is 1-indexing and slice is a closed interval)",
 }
 
 var peakExtension = Extension{
@@ -793,7 +712,10 @@ var peakExtension = Extension{
 		}
 		var outputs List
 		for j := 1; j < len(values); j++ {
-			i, ok := values[j].(int)
+			if j-1 < 0 || j-1 >= len(l) {
+				return nil, fmt.Errorf("list is out of range")
+			}
+			i, ok := values[j-1].(int)
 			if !ok {
 				return nil, fmt.Errorf("second argument must be integer")
 			}
@@ -804,7 +726,7 @@ var peakExtension = Extension{
 		}
 		return outputs, nil
 	},
-	Man: "extension: (peak l 3 2) - get elem from list (can get multiple elements)",
+	Man: "module: (peak l 3 2) - get elem from list (can get multiple elements) (list is 1-indexing)",
 }
 
 var mapModule = Module{
@@ -869,7 +791,7 @@ var mapModule = Module{
 		}
 		return outputs, nil
 	},
-	Man: "extension: (map l (lambda y (add 1 y))) - map",
+	Man: "module: (map l (lambda y (add 1 y))) - map",
 }
 
 // TODO - implement map filter reduce
@@ -885,7 +807,7 @@ var typeExtension = Extension{
 		}
 		return types, nil
 	},
-	Man: "extension: (type x 1 (lambda y (add 1 y))) - get types of objects (can get multiple ones)",
+	Man: "module: (type x 1 (lambda y (add 1 y))) - get types of objects (can get multiple ones)",
 }
 
 var stackModule = Module{
@@ -903,7 +825,7 @@ var printExtension = Extension{
 		fmt.Println()
 		return len(values), nil
 	},
-	Man: "extension: (print 1 x (lambda 3)) - print values",
+	Man: "module: (print 1 x (lambda 3)) - print values",
 }
 
 var unicodeExtension = Extension{
@@ -918,13 +840,14 @@ var unicodeExtension = Extension{
 		}
 		return output, nil
 	},
-	Man: "extension: (unicode 72 101 108 108 111 44 32 87 111 114 108 100 33) - convert a list of integers into string - this is just for hello world",
+	Man: "module: (unicode 72 101 108 108 111 44 32 87 111 114 108 100 33) - convert a list of integers into string - this is just for hello world",
 }
 ./pkg/fp/runtime_core.go
 package fp
 
 import (
 	"fmt"
+	"os"
 )
 
 type Runtime struct {
@@ -982,6 +905,83 @@ func (r *Runtime) LoadExtension(name Name, e Extension) *Runtime {
 		},
 		Man: e.Man,
 	})
+}
+
+const DETECT_NONPURE = true
+
+func (r *Runtime) searchOnStack(name Name) (Object, error) {
+	for i := len(r.Stack) - 1; i >= 0; i-- {
+		if o, ok := r.Stack[i][name]; ok {
+			if DETECT_NONPURE && i != 0 && i < len(r.Stack)-1 {
+				_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
+			}
+			return o, nil
+		}
+	}
+	return nil, fmt.Errorf("object not found %s", name)
+}
+
+// Step - implement minimal set of instructions for the language to be Turing complete
+// let, Lambda, case, sign, sub, add, tail
+func (r *Runtime) Step(expr Expr) (Object, error) {
+	switch expr := expr.(type) {
+	case Name:
+		var v Object
+		// parse name
+		v, err := r.parseLiteral(expr)
+		if err == nil {
+			return v, nil
+		}
+		// find in stack for variable
+		return r.searchOnStack(expr)
+
+	case LambdaExpr:
+		f, err := r.searchOnStack(expr.Name)
+		if err != nil {
+			return nil, err
+		}
+		switch f := f.(type) {
+		case Lambda:
+			// 1. evaluate arguments
+			args, err := r.stepMany(expr.Args...)
+			if err != nil {
+				return nil, err
+			}
+			// 2. add argument to local Frame
+			localFrame := make(Frame).Update(f.Frame)
+			for i := 0; i < len(f.Params); i++ {
+				localFrame[f.Params[i]] = args[i]
+			}
+			// 3. push Frame to Stack
+			r.Stack = append(r.Stack, localFrame)
+			// 4. exec function
+			v, err := r.Step(f.Impl)
+			if err != nil {
+				return nil, err
+			}
+			// 5. pop Frame from Stack
+			r.Stack = r.Stack[:len(r.Stack)-1]
+			return v, nil
+		case Module:
+			return f.Exec(r, expr)
+		default:
+			return nil, fmt.Errorf("function or module %s found but wrong type", expr.Name.String())
+		}
+	default:
+		return nil, fmt.Errorf("runtime error: unknown expression type")
+	}
+}
+
+func (r *Runtime) stepMany(exprList ...Expr) ([]Object, error) {
+	var outputs []Object
+	for _, expr := range exprList {
+		v, err := r.Step(expr)
+		if err != nil {
+			return nil, err
+		}
+		outputs = append(outputs, v)
+	}
+	return outputs, nil
 }
 ./pkg/fp/runtime_types.go
 package fp

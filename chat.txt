@@ -427,7 +427,7 @@ func processSpecialChar(str string) string {
 	return newStr
 }
 
-// Tokenize :
+// Tokenize : TODO - process raw string ""
 func Tokenize(str string) []Token {
 	str = removeComments(str)
 	str = processSpecialChar(str)

@@ -11,7 +11,7 @@ echo "\`\`\`" >> MANUAL.md
 ./export_to_chat > chat.txt
 
 # make webassembly binary
-GOOS=js GOARCH=wasm go build -o web_repl/main.wasm web_repl/main.go
+GOOS=js GOARCH=wasm go build -o web_repl/main.wasm web_repl/main.go || exit 1;
 
 git add .
 git commit -m "auto_push"

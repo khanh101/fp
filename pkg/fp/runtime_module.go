@@ -80,14 +80,14 @@ var caseModule = Module{
 	Man: "module: (case x 1 2 4 5) - case, if x=1 then return 3, if x=4 the return 5",
 }
 
-var resetModule = Module{
+var kaboomModule = Module{
 	Exec: func(r *Runtime, expr LambdaExpr) (Object, error) {
 		r.Stack = []Frame{
 			make(Frame),
 		}
 		return nil, nil
 	},
-	Man: "module: (reset) - reset stack - it is like `rm -rf`, you will lose everything",
+	Man: "module: (kaboom) - kaboom stack - it is like `rm -rf`, you will lose everything",
 }
 
 var tailExtension = Extension{

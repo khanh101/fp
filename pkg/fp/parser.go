@@ -2,6 +2,7 @@ package fp
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -14,22 +15,37 @@ func pop(tokenList []Token) ([]Token, Token, error) {
 	return tokenList[1:], tokenList[0], nil
 }
 
-// Tokenize : TODO add handling double quotes for string
-func Tokenize(str string) []Token {
-	// remove comment
-	parts := strings.Split(str, "\n")
-	var newParts []string
-	for _, part := range parts {
-		newParts = append(newParts, strings.Split(part, "//")[0])
+func removeComments(str string) string {
+	lines := strings.Split(str, "\n")
+	var newLines []string
+	for _, line := range lines {
+		newLines = append(newLines, strings.Split(line, "//")[0])
 	}
+	return strings.Join(newLines, "\n")
+}
 
-	str = strings.Join(newParts, "\n")
+func processSpecialChar(str string) string {
+	specialChars := map[rune]struct{}{
+		'(': {},
+		')': {},
+		'*': {}, // unwrap symbol
+	}
+	newStr := ""
+	for _, ch := range str {
+		if _, ok := specialChars[ch]; ok {
+			newStr += fmt.Sprintf(" %c ", ch)
+		} else {
+			newStr += string(ch)
+		}
+	}
+	return newStr
+}
 
-	str = strings.ReplaceAll(str, "\n", " ")
-	str = strings.ReplaceAll(str, "(", " ( ")
-	str = strings.ReplaceAll(str, ")", " ) ")
-	str = strings.ReplaceAll(str, "*", " * ") // unwrap
-
+// Tokenize :
+func Tokenize(str string) []Token {
+	str = removeComments(str)
+	str = processSpecialChar(str)
+	// tokenize
 	return strings.Fields(str)
 }
 

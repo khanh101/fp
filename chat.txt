@@ -134,6 +134,78 @@ func main() {
 		writeln("%v", o)
 	}
 }
+./cmd/test/main.go
+package main
+
+import (
+	"fmt"
+	"strings"
+	"unicode"
+)
+
+func splitWords(input string) []string {
+	var result []string
+	var word strings.Builder
+	inQuotes := false
+	i := 0
+	for i < len(input) {
+		char := input[i]
+
+		if char == '\\' && i+1 < len(input) { // Handle escaped characters
+			nextChar := input[i+1]
+			switch nextChar {
+			case 'n':
+				word.WriteByte('\n')
+			case 't':
+				word.WriteByte('\t')
+			case 'r':
+				word.WriteByte('\r')
+			case '"':
+				word.WriteByte('"')
+			case '\\':
+				word.WriteByte('\\')
+			default:
+				word.WriteByte(nextChar)
+			}
+			i += 2
+			continue
+		}
+
+		if char == '"' { // Handle quoted strings
+			inQuotes = !inQuotes
+			i++
+			continue
+		}
+
+		if unicode.IsSpace(rune(char)) && !inQuotes { // Split on whitespace outside quotes
+			if word.Len() > 0 {
+				result = append(result, word.String())
+				word.Reset()
+			}
+			i++
+			continue
+		}
+
+		word.WriteByte(char)
+		i++
+	}
+
+	if word.Len() > 0 {
+		result = append(result, word.String())
+	}
+
+	return result
+}
+
+func main() {
+	input := "hello world \"this is a \\\"quoted\\\" string\" test\nnew line\ttab"
+	words := splitWords(input)
+	for _, w := range words {
+		fmt.Println(w)
+	}
+
+	// Output: ["hello" "world" "this is a \"quoted\" string" "test"]
+}
 ./cmd/repl/main.go
 package main
 
@@ -316,6 +388,7 @@ package fp
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -328,22 +401,37 @@ func pop(tokenList []Token) ([]Token, Token, error) {
 	return tokenList[1:], tokenList[0], nil
 }
 
-// Tokenize : TODO add handling double quotes for string
-func Tokenize(str string) []Token {
-	// remove comment
-	parts := strings.Split(str, "\n")
-	var newParts []string
-	for _, part := range parts {
-		newParts = append(newParts, strings.Split(part, "//")[0])
+func removeComments(str string) string {
+	lines := strings.Split(str, "\n")
+	var newLines []string
+	for _, line := range lines {
+		newLines = append(newLines, strings.Split(line, "//")[0])
 	}
+	return strings.Join(newLines, "\n")
+}
 
-	str = strings.Join(newParts, "\n")
+func processSpecialChar(str string) string {
+	specialChars := map[rune]struct{}{
+		'(': {},
+		')': {},
+		'*': {}, // unwrap symbol
+	}
+	newStr := ""
+	for _, ch := range str {
+		if _, ok := specialChars[ch]; ok {
+			newStr += fmt.Sprintf(" %c ", ch)
+		} else {
+			newStr += string(ch)
+		}
+	}
+	return newStr
+}
 
-	str = strings.ReplaceAll(str, "\n", " ")
-	str = strings.ReplaceAll(str, "(", " ( ")
-	str = strings.ReplaceAll(str, ")", " ) ")
-	str = strings.ReplaceAll(str, "*", " * ") // unwrap
-
+// Tokenize :
+func Tokenize(str string) []Token {
+	str = removeComments(str)
+	str = processSpecialChar(str)
+	// tokenize
 	return strings.Fields(str)
 }
 

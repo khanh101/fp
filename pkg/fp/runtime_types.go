@@ -4,7 +4,7 @@ import "fmt"
 
 // types - TODO implement custom data types like Int, List, Dict
 
-// Object : object union of int, Lambda, Module, List, Wildcard - TODO : introduce new data types
+// Object : union - TODO : introduce new data types
 type Object interface {
 	String() string
 }
@@ -21,8 +21,13 @@ func getType(o Object) String {
 		return "Module"
 	case List:
 		return "List"
+	case Dict:
+		return "Dict"
 	case Wildcard:
 		return "wildcard"
+	case Unwrap:
+		// unfortunately, one cannot use (type *) to get the type if unwrap since it will try to replace unwrap the next argument
+		return "unwrap"
 	default:
 		return "unknown"
 	}

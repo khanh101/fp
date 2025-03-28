@@ -61,6 +61,9 @@ func (r *Runtime) LoadExtension(name Name, e Extension) *Runtime {
 			i := 0
 			for i < len(args) {
 				if _, ok := args[i].(Unwrap); ok {
+					if i+1 >= len(args) {
+						return nil, errors.New("unwrapping arguments must be a list")
+					}
 					argsList, ok := args[i+1].(List)
 					if !ok {
 						return nil, errors.New("unwrapping arguments must be a list")

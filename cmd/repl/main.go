@@ -54,7 +54,7 @@ func main() {
 		if err != nil {
 			if errors.Is(err, readline.ErrInterrupt) { // Handle Ctrl+C
 				output := repl.ClearBuffer()
-				_, _ = fmt.Fprint(os.Stderr, output)
+				_, _ = fmt.Fprint(os.Stderr, "    "+output)
 				continue
 			} else if err == io.EOF { // Handle Ctrl+D (exit)
 				os.Exit(0)
@@ -67,7 +67,7 @@ func main() {
 
 		// Print REPL output
 		if output != "" {
-			_, _ = fmt.Fprint(os.Stderr, output)
+			_, _ = fmt.Fprint(os.Stdout, "    "+output)
 		}
 
 		// If executed is true, print prompt again
@@ -76,7 +76,7 @@ func main() {
 			rl.SetPrompt(">>> ")
 		} else {
 			// Otherwise, indent continuation line (you can choose what to show)
-			rl.SetPrompt("") // Or set it to "" for no prompt if not executed
+			rl.SetPrompt("    ") // Or set it to "" for no prompt if not executed
 		}
 	}
 }

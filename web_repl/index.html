@@ -86,6 +86,21 @@
         #copy-button:hover {
             background-color: #00b3b3;
         }
+        #clear-btn {
+            background-color: rgba(212, 182, 0, 0.65);
+            color: #181818;
+            border: none;
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        #clear-btn:hover {
+            background-color: #00b3b3;
+        }
 
         .cursor {
             display: inline-block;
@@ -110,7 +125,8 @@
         <textarea id="input" autofocus autocomplete="off"></textarea>
         <span class="cursor"></span>
     </div>
-    <button id="copy-button">Copy All</button>
+    <button id="copy-button">copy all</button>
+    <button id="clear-btn">clear parser buffer (simulate control + c)</button>
 </div>
 
 <script>
@@ -143,6 +159,18 @@
         selection.addRange(range);
         document.execCommand('copy');
     });
+    // clear buffer
+    document.getElementById("clear-btn").addEventListener("click", () => {
+        // Clear the output in the web UI
+        // outputEl.innerHTML = "";
+
+        // Call the Go function to clear the buffer
+        if (window.clearBuffer) {
+            window.clearBuffer();
+        }
+    });
+
+
 
     // Function to handle user input
     const outputEl = document.getElementById("output");

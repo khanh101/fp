@@ -44,7 +44,7 @@ func (r *fpRepl) ReplyInput(input string) (output string) {
 
 func (r *fpRepl) ClearBuffer() (output string) {
 	r.parser.Clear()
-	r.writeln(">>> (Control + C) to clear buffer, (Control + D) to exit")
+	r.writeln(">>> (Control + C) to clear parser buffer, (Control + D) to exit")
 	r.writeln(">>>")
 	return r.flush()
 }

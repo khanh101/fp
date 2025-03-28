@@ -206,6 +206,12 @@ func evaluate(this js.Value, p []js.Value) interface{} {
 	return output
 }
 
+// Go function to handle buffer clearing
+func clearBuffer(this js.Value, p []js.Value) interface{} {
+	write(r.ClearBuffer())
+	return nil
+}
+
 func main() {
 	// initialize
 	var welcome string
@@ -213,6 +219,7 @@ func main() {
 	write(welcome)
 
 	js.Global().Set("evaluate", js.FuncOf(evaluate))
+	js.Global().Set("clearBuffer", js.FuncOf(clearBuffer))
 	// Keep WebAssembly running
 	select {}
 }
@@ -1087,7 +1094,7 @@ func (r *fpRepl) ReplyInput(input string) (output string) {
 
 func (r *fpRepl) ClearBuffer() (output string) {
 	r.parser.Clear()
-	r.writeln(">>> (Control + C) to clear buffer, (Control + D) to exit")
+	r.writeln(">>> (Control + C) to clear parser buffer, (Control + D) to exit")
 	r.writeln(">>>")
 	return r.flush()
 }

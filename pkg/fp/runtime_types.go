@@ -47,6 +47,12 @@ func (d Dict) String() string {
 	return s
 }
 
+type Unwrap struct{}
+
+func (u Unwrap) String() string {
+	return "*"
+}
+
 type Wildcard struct{}
 
 func (w Wildcard) String() string {

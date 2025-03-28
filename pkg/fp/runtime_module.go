@@ -248,36 +248,37 @@ var sliceExtension = Extension{
 			return nil, fmt.Errorf("third argument must be integer")
 		}
 		length := Int(len(l))
-		if i-1 < 0 || i-1 >= length || j-1 < 0 || j-1 >= length {
+		if i < 1 || i > length || j < 1 || j > length {
 			return nil, fmt.Errorf("list is out of range")
 		}
-		return l[i-1 : j-1], nil
+		return l[i-1 : j], nil
 	},
 	Man: "module: (slice l 2 3) - make a slice of a list l[2, 3] (list is 1-indexing and slice is a closed interval)",
 }
 
 var peakExtension = Extension{
 	Exec: func(values ...Object) (Object, error) {
-		if len(values) >= 2 {
+		if len(values) < 2 {
 			return nil, fmt.Errorf("peak requires at least 2 arguments")
 		}
 		l, ok := values[0].(List)
 		if !ok {
 			return nil, fmt.Errorf("first argument must be list")
 		}
-		if len(l) < 1 {
+		length := Int(len(l))
+		if length < 1 {
 			return nil, fmt.Errorf("empty list")
 		}
 		var outputs List
 		for j := 1; j < len(values); j++ {
-			if j-1 < 0 || j-1 >= len(l) {
-				return nil, fmt.Errorf("list is out of range")
-			}
-			i, ok := values[j-1].(Int)
+			i, ok := values[j].(Int)
 			if !ok {
 				return nil, fmt.Errorf("second argument must be integer")
 			}
-			outputs = append(outputs, l[i])
+			if i < 1 || i > length {
+				return nil, fmt.Errorf("list is out of range")
+			}
+			outputs = append(outputs, l[i-1])
 		}
 		if len(outputs) == 1 {
 			return outputs[0], nil
@@ -396,12 +397,13 @@ var printExtension = Extension{
 
 var unicodeExtension = Extension{
 	Exec: func(values ...Object) (Object, error) {
+
 		var output String = ""
 		for _, v := range values {
 			if v, ok := v.(Int); ok {
 				output += String(fmt.Sprintf("%c", rune(v)))
 			} else {
-				return nil, fmt.Errorf("argument must be int or list")
+				return nil, fmt.Errorf("argument must be int")
 			}
 		}
 		return output, nil

@@ -28,6 +28,7 @@ func Tokenize(str string) []Token {
 	str = strings.ReplaceAll(str, "\n", " ")
 	str = strings.ReplaceAll(str, "(", " ( ")
 	str = strings.ReplaceAll(str, ")", " ) ")
+	str = strings.ReplaceAll(str, "*", " * ") // unwrap
 
 	return strings.Fields(str)
 }

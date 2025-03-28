@@ -11,6 +11,9 @@ func NewPlainRuntime() *Runtime {
 			if lit == "_" {
 				return Wildcard{}, nil
 			}
+			if lit == "*" {
+				return Unwrap{}, nil
+			}
 			i, err := strconv.Atoi(lit.String())
 			return Int(i), err
 		},

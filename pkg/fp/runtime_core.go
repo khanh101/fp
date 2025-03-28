@@ -1,6 +1,7 @@
 package fp
 
 import (
+	"errors"
 	"fmt"
 	"os"
 )
@@ -56,7 +57,24 @@ func (r *Runtime) LoadExtension(name Name, e Extension) *Runtime {
 			if err != nil {
 				return nil, err
 			}
-			return e.Exec(args...)
+			var unwrappedArgs []Object
+			i := 0
+			for i < len(args) {
+				if _, ok := args[i].(Unwrap); ok {
+					argsList, ok := args[i+1].(List)
+					if !ok {
+						return nil, errors.New("unwrapping arguments must be a list")
+					}
+					for _, elem := range argsList {
+						unwrappedArgs = append(unwrappedArgs, elem)
+					}
+					i += 2
+				} else {
+					unwrappedArgs = append(unwrappedArgs, args[i])
+					i++
+				}
+			}
+			return e.Exec(unwrappedArgs...)
 		},
 		Man: e.Man,
 	})

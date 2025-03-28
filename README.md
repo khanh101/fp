@@ -17,8 +17,10 @@ Have fun 🤗
 ## MANUAL
 
 - for builtin modules, extensions, see `MANUAL.md`
+
+### SPECIAL SYMBOLS
 - wildcard symbol: `_` is a special symbol used in `case` to mark every other cases
-- no match is `case` is an undefined behavior
+- unwrap symbol: `*` is a special symbol to unwrap a list, for example `(add 1 2)` is equivalent to `(add * (list 1 2))` 
 
 ## How to handle infix operator?
 

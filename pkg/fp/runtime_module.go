@@ -92,7 +92,7 @@ var doomExtension = Extension{
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		return String(fmt.Sprintf("i told you - we don't have Doom yet")), nil
 	},
-	Man: "module: (doom) - i told you - we don't have Doom yet",
+	Man: "module: (doom) - extra modules required https://youtu.be/dQw4w9WgXcQ",
 }
 
 var tailExtension = Extension{

@@ -18,7 +18,7 @@ func writeln(format string, args ...interface{}) {
 
 func main() {
 	r := fp.NewStdRuntime()
-	writeln("welcome to fp repl! type <function or module name> for help")
+	writeln("welcome to fp repl! type function or module name for help")
 	var funcNameList []string
 	for k := range r.Stack[0] {
 		funcNameList = append(funcNameList, string(k))

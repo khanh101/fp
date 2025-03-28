@@ -1,5 +1,5 @@
 ```lisp
-welcome to fp repl! type <function or module name> for help
+welcome to fp repl! type function or module name for help
 >>>add
 module: (add 1 (add 2 3) 3) - exec a sequence of expressions and return the sum
 >>>append
@@ -11,7 +11,7 @@ module: (del x) - delete variable x
 >>>div
 module: (div 2 (add 1 1)) - exec two expressions and return ratio
 >>>doom
-module: (doom) - i told you - we don't have Doom yet
+module: (doom) - extra modules required https://youtu.be/dQw4w9WgXcQ
 >>>kaboom
 module: (kaboom) - remove everything except global frame
 >>>lambda

@@ -73,7 +73,7 @@ func NewFP(runtime *fp.Runtime) (repl REPL, welcome string) {
 		parser:  &fp.Parser{},
 		buffer:  "",
 	}
-	r.writeln("welcome to fp repl! type <function or module name> for help")
+	r.writeln("welcome to fp repl! type function or module name for help")
 	r.write("loaded modules: ")
 	var funcNameList []string
 	for k := range r.runtime.Stack[0] {

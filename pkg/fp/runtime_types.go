@@ -112,6 +112,7 @@ func (l Lambda) MustTypeObject() struct{} {
 }
 
 type Module struct {
+	Name String `json:"name,omitempty"`
 	Exec func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error)
 	Man  string `json:"man,omitempty"`
 }

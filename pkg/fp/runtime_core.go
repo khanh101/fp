@@ -35,8 +35,8 @@ func (r *Runtime) String() string {
 	return s
 }
 
-func (r *Runtime) LoadModule(name String, f Module) *Runtime {
-	r.Stack[0][name] = f
+func (r *Runtime) LoadModule(m Module) *Runtime {
+	r.Stack[0][m.Name] = m
 	return r
 }
 
@@ -46,12 +46,14 @@ func (r *Runtime) LoadParseLiteral(f func(lit String) (Object, error)) *Runtime 
 }
 
 type Extension struct {
+	Name String
 	Exec func(<-chan struct{}, ...Object) (Object, error)
 	Man  string
 }
 
-func (r *Runtime) LoadExtension(name String, e Extension) *Runtime {
-	return r.LoadModule(name, Module{
+func (r *Runtime) LoadExtension(e Extension) *Runtime {
+	return r.LoadModule(Module{
+		Name: e.Name,
 		Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
 			args, err := r.stepMany(interruptCh, expr.Args...)
 			if err != nil {

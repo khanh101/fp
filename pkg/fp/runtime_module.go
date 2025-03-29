@@ -5,6 +5,7 @@ import (
 )
 
 var letModule = Module{
+	Name: "let",
 	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
 		if len(expr.Args) < 2 {
 			return nil, fmt.Errorf("not enough arguments for let")
@@ -21,6 +22,7 @@ var letModule = Module{
 }
 
 var delModule = Module{
+	Name: "del",
 	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
 		if len(expr.Args) < 1 {
 			return nil, fmt.Errorf("not enough arguments for del")
@@ -37,6 +39,7 @@ var delModule = Module{
 }
 
 var lambdaModule = Module{
+	Name: "lambda",
 	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
 		v := Lambda{
 			Params: nil,
@@ -55,6 +58,7 @@ var lambdaModule = Module{
 }
 
 var caseModule = Module{
+	Name: "case",
 	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
 		cond, err := r.Step(expr.Args[0], interruptCh)
 		if err != nil {
@@ -81,6 +85,7 @@ var caseModule = Module{
 }
 
 var kaboomModule = Module{
+	Name: "kaboom",
 	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
 		r.Stack = r.Stack[0:1]
 		return nil, nil
@@ -89,6 +94,7 @@ var kaboomModule = Module{
 }
 
 var doomExtension = Extension{
+	Name: "doom",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		return String(fmt.Sprintf("i told you - we don't have Doom yet")), nil
 	},
@@ -96,6 +102,7 @@ var doomExtension = Extension{
 }
 
 var tailExtension = Extension{
+	Name: "tail",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		return values[len(values)-1], nil
 	},
@@ -103,6 +110,7 @@ var tailExtension = Extension{
 }
 
 var addExtension = Extension{
+	Name: "add",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		var sum Int = 0
 		for i := 0; i < len(values); i++ {
@@ -118,6 +126,7 @@ var addExtension = Extension{
 }
 
 var mulExtension = Extension{
+	Name: "mul",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		var sum Int = 1
 		for i := 0; i < len(values); i++ {
@@ -133,6 +142,7 @@ var mulExtension = Extension{
 }
 
 var subExtension = Extension{
+	Name: "sub",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		if len(values) != 2 {
 			return nil, fmt.Errorf("subtract requires 2 arguments")
@@ -151,6 +161,7 @@ var subExtension = Extension{
 }
 
 var divExtension = Extension{
+	Name: "div",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		if len(values) != 2 {
 			return nil, fmt.Errorf("dividing requires 2 arguments")
@@ -172,6 +183,7 @@ var divExtension = Extension{
 }
 
 var modExtension = Extension{
+	Name: "mod",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		if len(values) != 2 {
 			return nil, fmt.Errorf("dividing requires 2 arguments")
@@ -193,6 +205,7 @@ var modExtension = Extension{
 }
 
 var signExtension = Extension{
+	Name: "sign",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		v, ok := values[len(values)-1].(Int)
 		if !ok {
@@ -211,6 +224,7 @@ var signExtension = Extension{
 }
 
 var listExtension = Extension{
+	Name: "list",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		var l List
 		for _, v := range values {
@@ -222,6 +236,7 @@ var listExtension = Extension{
 }
 
 var appendExtension = Extension{
+	Name: "append",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		l, ok := values[0].(List)
 		if !ok {
@@ -233,6 +248,7 @@ var appendExtension = Extension{
 }
 
 var sliceExtension = Extension{
+	Name: "slice",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		if len(values) != 3 {
 			return nil, fmt.Errorf("slice requires 3 arguments")
@@ -262,6 +278,7 @@ var sliceExtension = Extension{
 }
 
 var peekExtension = Extension{
+	Name: "peek",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		if len(values) < 2 {
 			return nil, fmt.Errorf("peak requires at least 2 arguments")
@@ -294,6 +311,7 @@ var peekExtension = Extension{
 }
 
 var lenExtension = Extension{
+	Name: "len",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		if len(values) != 1 {
 			return nil, fmt.Errorf("len requires 1 argument")
@@ -311,6 +329,7 @@ var lenExtension = Extension{
 }
 
 var mapModule = Module{
+	Name: "map",
 	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
 		if len(expr.Args) != 2 {
 			return nil, fmt.Errorf("map requires 2 arguments")
@@ -378,6 +397,7 @@ var mapModule = Module{
 // TODO - implement map filter reduce
 
 var typeExtension = Extension{
+	Name: "type",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		var types List
 		for _, v := range values {
@@ -392,6 +412,7 @@ var typeExtension = Extension{
 }
 
 var stackModule = Module{
+	Name: "stack",
 	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
 		var stack List
 		for _, f := range r.Stack {
@@ -407,6 +428,7 @@ var stackModule = Module{
 }
 
 var printExtension = Extension{
+	Name: "print",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 		for _, v := range values {
 			fmt.Printf("%v ", v)
@@ -418,6 +440,7 @@ var printExtension = Extension{
 }
 
 var unicodeExtension = Extension{
+	Name: "unicode",
 	Exec: func(interruptCh <-chan struct{}, values ...Object) (Object, error) {
 
 		var output String = ""

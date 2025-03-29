@@ -21,37 +21,37 @@ func NewCoreRuntime() *Runtime {
 			make(Frame),
 		},
 	}).
-		LoadModule("let", letModule).
-		LoadModule("del", delModule).
-		LoadModule("lambda", lambdaModule).
-		LoadModule("case", caseModule)
+		LoadModule(letModule).
+		LoadModule(delModule).
+		LoadModule(lambdaModule).
+		LoadModule(caseModule)
 }
 
 // NewBasicRuntime : NewCoreRuntime + minimal set of arithmetic extensions for Turing completeness
 func NewBasicRuntime() *Runtime {
 	return NewCoreRuntime().
-		LoadExtension("tail", tailExtension).
-		LoadExtension("add", addExtension).
-		LoadExtension("sub", subExtension).
-		LoadExtension("sign", signExtension)
+		LoadExtension(tailExtension).
+		LoadExtension(addExtension).
+		LoadExtension(subExtension).
+		LoadExtension(signExtension)
 }
 
 // NewStdRuntime : NewCoreRuntime + standard functions
 func NewStdRuntime() *Runtime {
 	return NewBasicRuntime().
-		LoadExtension("mul", mulExtension).
-		LoadExtension("div", divExtension).
-		LoadExtension("mod", modExtension).
-		LoadExtension("print", printExtension).
-		LoadExtension("list", listExtension).
-		LoadExtension("append", appendExtension).
-		LoadExtension("slice", sliceExtension).
-		LoadExtension("peek", peekExtension).
-		LoadExtension("len", lenExtension).
-		LoadModule("map", mapModule).
-		LoadExtension("type", typeExtension).
-		LoadModule("stack", stackModule).
-		LoadExtension("unicode", unicodeExtension).
-		LoadModule("kaboom", kaboomModule).
-		LoadExtension("doom", doomExtension)
+		LoadExtension(mulExtension).
+		LoadExtension(divExtension).
+		LoadExtension(modExtension).
+		LoadExtension(printExtension).
+		LoadExtension(listExtension).
+		LoadExtension(appendExtension).
+		LoadExtension(sliceExtension).
+		LoadExtension(peekExtension).
+		LoadExtension(lenExtension).
+		LoadModule(mapModule).
+		LoadExtension(typeExtension).
+		LoadModule(stackModule).
+		LoadExtension(unicodeExtension).
+		LoadModule(kaboomModule).
+		LoadExtension(doomExtension)
 }

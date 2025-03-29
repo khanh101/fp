@@ -67,7 +67,7 @@ func main() {
 
 		// Print REPL output
 		if output != "" {
-			_, _ = fmt.Fprint(os.Stdout, "    "+output)
+			_, _ = fmt.Fprint(os.Stderr, "    "+output)
 		}
 
 		// If executed is true, print prompt again

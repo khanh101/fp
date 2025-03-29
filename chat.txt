@@ -920,6 +920,7 @@ var lenExtension = Extension{
 	Man: "module: (len l) - get length of a list of dict",
 }
 
+// mapModule - TODO make map parallel by make a copy of the latest frame, reuse other frames, call in parallel
 var mapModule = Module{
 	Name: "map",
 	Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {

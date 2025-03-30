@@ -3,6 +3,7 @@ package fp
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 var letModule = Module{
@@ -456,4 +457,12 @@ var unicodeExtension = Extension{
 		return output, nil
 	},
 	Man: "module: (unicode 72 101 108 108 111 44 32 87 111 114 108 100 33) - convert a list of integers into string - this is just for hello world",
+}
+
+var timeExtension = Extension{
+	Name: "time",
+	Exec: func(ctx context.Context, values ...Object) (Object, error) {
+		return Int(time.Now().UnixNano()), nil
+	},
+	Man: "(time) - get current time",
 }

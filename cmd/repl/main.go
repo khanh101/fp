@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"fp/pkg/fp"
@@ -9,33 +10,15 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
-	"time"
 )
 
-type signalCtx struct {
-	interrupt chan struct{}
-}
-
-func (ctx *signalCtx) Value(key any) any {
-	return nil
-}
-
-func (ctx *signalCtx) Done() <-chan struct{} {
-	return ctx.interrupt
-}
-func (ctx *signalCtx) Deadline() (deadline time.Time, ok bool) {
-	return time.Time{}, false
-}
-func (ctx *signalCtx) Err() error {
-	return nil
-}
-
 func main() {
+	replMtx := &sync.Mutex{}
 	repl, welcome := repl.NewFP(fp.NewStdRuntime())
 	_, _ = fmt.Fprintf(os.Stderr, welcome)
 
-	// Create a readline instance with a static prompt
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:          ">>> ",                 // Default prompt
 		HistoryFile:     "/tmp/fp_repl_history", // Save command history
@@ -46,55 +29,55 @@ func main() {
 	}
 	defer rl.Close()
 
-	ctx := &signalCtx{interrupt: make(chan struct{}, 1)}
+	var ctx context.Context
+	var cancel context.CancelFunc = func() {}
 
-	// Channel for OS signals (SIGINT, SIGTERM)
+	// handle syscall.SIGINT, syscall.SIGTERM when running code
 	signalCh := make(chan os.Signal, 1)
-	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
-
-	// Goroutine to listen for interrupts and notify REPL
+	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		for sig := range signalCh {
-			if sig == os.Interrupt {
-				select {
-				case ctx.interrupt <- struct{}{}:
-				default:
-				}
-			} else {
-				os.Exit(0) // Exit cleanly on SIGTERM
+			cancel()
+			switch sig {
+			case syscall.SIGINT:
+				replMtx.Lock()
+				output := repl.ClearBuffer()
+				replMtx.Unlock()
+				_, _ = fmt.Fprint(os.Stderr, "    "+output)
+			case syscall.SIGTERM:
+				os.Exit(0)
 			}
 		}
 	}()
 
 	for {
-		// Read input
 		line, err := rl.Readline()
 		if err != nil {
-			if errors.Is(err, readline.ErrInterrupt) { // Handle Ctrl+C
+			if errors.Is(err, readline.ErrInterrupt) { // handle syscall.SIGINT when receiving input
+				replMtx.Lock()
 				output := repl.ClearBuffer()
+				replMtx.Unlock()
 				_, _ = fmt.Fprint(os.Stderr, "    "+output)
 				continue
-			} else if err == io.EOF { // Handle Ctrl+D (exit)
+			} else if err == io.EOF { // handle syscall.SIGTERM when receiving input
 				os.Exit(0)
 			}
 			panic(err)
 		}
+		ctx, cancel = context.WithCancel(context.Background())
 
-		// Process input in REPL
+		replMtx.Lock()
 		output, executed := repl.ReplyInput(ctx, line)
+		replMtx.Unlock()
 
-		// Print REPL output
 		if output != "" {
 			_, _ = fmt.Fprint(os.Stderr, "    "+output)
 		}
 
-		// If executed is true, print prompt again
 		if executed {
-			// Reset the prompt to ">>> " when input is executed
-			rl.SetPrompt(">>> ")
+			rl.SetPrompt(">>> ") // reset prompt if command is executed
 		} else {
-			// Otherwise, indent continuation line (you can choose what to show)
-			rl.SetPrompt("    ") // Or set it to "" for no prompt if not executed
+			rl.SetPrompt("    ") // otherwise
 		}
 	}
 }

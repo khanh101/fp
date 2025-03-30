@@ -111,7 +111,7 @@ var InterruptError = Interrupt{}
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
 func (r *Runtime) Step(ctx context.Context, expr Expr) (Object, error) {
-	// TODO - get step option from context here - something is like - parallel, tail_call_optimization,
+	// TODO - get step option from context here - something is like - parallel, tail_call_optimization, error, or deadline
 	select {
 	case <-ctx.Done():
 		return nil, InterruptError

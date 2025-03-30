@@ -32,10 +32,10 @@ func main() {
 	var ctx context.Context
 	var cancel context.CancelFunc = func() {}
 
-	// handle syscall.SIGINT, syscall.SIGTERM when running code
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
+		// receive SIGINT, SIGTERM when running code -> stop code
 		for range signalCh {
 			cancel()
 		}
@@ -44,7 +44,8 @@ func main() {
 	for {
 		line, err := rl.Readline()
 		if err != nil {
-			if errors.Is(err, readline.ErrInterrupt) { // handle syscall.SIGINT when receiving input
+			if errors.Is(err, readline.ErrInterrupt) {
+				// receive SIGINT when typing -> clear buffer
 				func() {
 					replMtx.Lock()
 					defer replMtx.Unlock()
@@ -54,7 +55,8 @@ func main() {
 					}
 				}()
 				continue
-			} else if err == io.EOF { // handle syscall.SIGTERM when receiving input
+			} else if err == io.EOF {
+				// receive SIGTERM when typing -> exit
 				os.Exit(0)
 			}
 			panic(err)

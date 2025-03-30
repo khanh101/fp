@@ -36,21 +36,8 @@ func main() {
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		for sig := range signalCh {
+		for range signalCh {
 			cancel()
-			switch sig {
-			case syscall.SIGINT:
-				func() {
-					replMtx.Lock()
-					defer replMtx.Unlock()
-					output := repl.ClearBuffer()
-					if output != "" {
-						_, _ = fmt.Fprint(os.Stderr, "    "+output)
-					}
-				}()
-			case syscall.SIGTERM:
-				os.Exit(0)
-			}
 		}
 	}()
 
@@ -81,7 +68,13 @@ func main() {
 			if output != "" {
 				_, _ = fmt.Fprint(os.Stderr, "    "+output)
 			}
-			if executed {
+			contextCancelled := false
+			select {
+			case <-ctx.Done():
+				contextCancelled = true
+			default:
+			}
+			if executed || contextCancelled {
 				rl.SetPrompt(">>> ") // reset prompt if command is executed
 			} else {
 				rl.SetPrompt("    ") // otherwise

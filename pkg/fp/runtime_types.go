@@ -1,6 +1,9 @@
 package fp
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 // types - TODO implement custom data types like Int, List, Dict
 
@@ -113,7 +116,7 @@ func (l Lambda) MustTypeObject() struct{} {
 
 type Module struct {
 	Name String `json:"name,omitempty"`
-	Exec func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error)
+	Exec func(ctx context.Context, r *Runtime, expr LambdaExpr) (Object, error)
 	Man  string `json:"man,omitempty"`
 }
 

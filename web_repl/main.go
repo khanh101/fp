@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"fp/pkg/fp"
 	"fp/pkg/repl"
@@ -23,7 +24,7 @@ func evaluate(this js.Value, p []js.Value) interface{} {
 	input := p[0].String()
 
 	// repl here
-	output, _ := r.ReplyInput(input, nil)
+	output, _ := r.ReplyInput(context.Background(), input)
 	// end repl here
 
 	output = strings.ReplaceAll(output, "\n", "<br>")

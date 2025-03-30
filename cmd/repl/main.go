@@ -10,7 +10,29 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
+
+type signalCtx struct {
+	interrupt chan struct{}
+}
+
+func (ctx *signalCtx) Value(key any) any {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ctx *signalCtx) Done() <-chan struct{} {
+	return ctx.interrupt
+}
+func (ctx *signalCtx) Deadline() (deadline time.Time, ok bool) {
+	//TODO implement me
+	panic("implement me")
+}
+func (ctx *signalCtx) Err() error {
+	//TODO implement me
+	panic("implement me")
+}
 
 func main() {
 	repl, welcome := repl.NewFP(fp.NewStdRuntime())
@@ -27,8 +49,7 @@ func main() {
 	}
 	defer rl.Close()
 
-	// Channel to signal interrupts (Ctrl+C)
-	interruptCh := make(chan struct{}, 1)
+	ctx := &signalCtx{interrupt: make(chan struct{}, 1)}
 
 	// Channel for OS signals (SIGINT, SIGTERM)
 	signalCh := make(chan os.Signal, 1)
@@ -39,7 +60,7 @@ func main() {
 		for sig := range signalCh {
 			if sig == os.Interrupt {
 				select {
-				case interruptCh <- struct{}{}:
+				case ctx.interrupt <- struct{}{}:
 				default:
 				}
 			} else {
@@ -63,7 +84,7 @@ func main() {
 		}
 
 		// Process input in REPL
-		output, executed := repl.ReplyInput(line, interruptCh)
+		output, executed := repl.ReplyInput(ctx, line)
 
 		// Print REPL output
 		if output != "" {

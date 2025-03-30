@@ -1,6 +1,7 @@
 package fp
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -47,15 +48,15 @@ func (r *Runtime) LoadParseLiteral(f func(lit String) (Object, error)) *Runtime 
 
 type Extension struct {
 	Name String
-	Exec func(<-chan struct{}, ...Object) (Object, error)
+	Exec func(ctx context.Context, values ...Object) (Object, error)
 	Man  string
 }
 
 func (r *Runtime) LoadExtension(e Extension) *Runtime {
 	return r.LoadModule(Module{
 		Name: e.Name,
-		Exec: func(r *Runtime, expr LambdaExpr, interruptCh <-chan struct{}) (Object, error) {
-			args, err := r.stepMany(interruptCh, expr.Args...)
+		Exec: func(ctx context.Context, r *Runtime, expr LambdaExpr) (Object, error) {
+			args, err := r.stepMany(ctx, expr.Args...)
 			if err != nil {
 				return nil, err
 			}
@@ -79,7 +80,7 @@ func (r *Runtime) LoadExtension(e Extension) *Runtime {
 					i++
 				}
 			}
-			return e.Exec(interruptCh, unwrappedArgs...)
+			return e.Exec(ctx, unwrappedArgs...)
 		},
 		Man: e.Man,
 	})
@@ -109,9 +110,9 @@ var InterruptError = Interrupt{}
 
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
-func (r *Runtime) Step(expr Expr, interruptCh <-chan struct{}) (Object, error) {
+func (r *Runtime) Step(ctx context.Context, expr Expr) (Object, error) {
 	select {
-	case <-interruptCh:
+	case <-ctx.Done():
 		return nil, InterruptError
 	default:
 		switch expr := expr.(type) {
@@ -133,7 +134,7 @@ func (r *Runtime) Step(expr Expr, interruptCh <-chan struct{}) (Object, error) {
 			switch f := f.(type) {
 			case Lambda:
 				// 1. evaluate arguments
-				args, err := r.stepMany(interruptCh, expr.Args...)
+				args, err := r.stepMany(ctx, expr.Args...)
 				if err != nil {
 					return nil, err
 				}
@@ -145,7 +146,7 @@ func (r *Runtime) Step(expr Expr, interruptCh <-chan struct{}) (Object, error) {
 				// 3. push Frame to Stack
 				r.Stack = append(r.Stack, localFrame)
 				// 4. exec function
-				v, err := r.Step(f.Impl, interruptCh)
+				v, err := r.Step(ctx, f.Impl)
 				if err != nil {
 					return nil, err
 				}
@@ -153,7 +154,7 @@ func (r *Runtime) Step(expr Expr, interruptCh <-chan struct{}) (Object, error) {
 				r.Stack = r.Stack[:len(r.Stack)-1]
 				return v, nil
 			case Module:
-				return f.Exec(r, expr, interruptCh)
+				return f.Exec(ctx, r, expr)
 			default:
 				return nil, fmt.Errorf("function or module %s found but wrong type", expr.Name.String())
 			}
@@ -163,10 +164,10 @@ func (r *Runtime) Step(expr Expr, interruptCh <-chan struct{}) (Object, error) {
 	}
 }
 
-func (r *Runtime) stepMany(interruptCh <-chan struct{}, exprList ...Expr) ([]Object, error) {
+func (r *Runtime) stepMany(ctx context.Context, exprList ...Expr) ([]Object, error) {
 	var outputs []Object
 	for _, expr := range exprList {
-		v, err := r.Step(expr, interruptCh)
+		v, err := r.Step(ctx, expr)
 		if err != nil {
 			return nil, err
 		}

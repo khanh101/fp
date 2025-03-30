@@ -1,6 +1,7 @@
 package repl
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"fp/pkg/fp"
@@ -8,7 +9,7 @@ import (
 )
 
 type REPL interface {
-	ReplyInput(input string, interruptCh <-chan struct{}) (output string, executed bool)
+	ReplyInput(ctx context.Context, input string) (output string, executed bool)
 	ClearBuffer() (output string)
 }
 
@@ -18,7 +19,7 @@ type fpRepl struct {
 	buffer  string
 }
 
-func (r *fpRepl) ReplyInput(input string, interruptCh <-chan struct{}) (output string, executed bool) {
+func (r *fpRepl) ReplyInput(ctx context.Context, input string) (output string, executed bool) {
 	tokenList := fp.Tokenize(input)
 	executed = false
 	if len(tokenList) == 0 {
@@ -31,7 +32,7 @@ func (r *fpRepl) ReplyInput(input string, interruptCh <-chan struct{}) (output s
 
 				lastFrame := make(fp.Frame).Update(r.runtime.Stack[len(r.runtime.Stack)-1])
 				stackSize := len(r.runtime.Stack)
-				output, err := r.runtime.Step(expr, interruptCh)
+				output, err := r.runtime.Step(ctx, expr)
 				if err != nil {
 					if errors.Is(err, fp.InterruptError) {
 						// reset stack size

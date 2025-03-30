@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 )
 
 type Runtime struct {
@@ -100,19 +101,26 @@ func (r *Runtime) searchOnStack(name String) (Object, error) {
 	return nil, fmt.Errorf("object not found %s", name)
 }
 
-type Interrupt struct{}
+var InterruptError = errors.New("interrupt")
+var TimeoutError = errors.New("timeout")
 
-func (i Interrupt) Error() string {
-	return "interrupt"
+type stepOptions struct {
 }
-
-var InterruptError = Interrupt{}
 
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
 func (r *Runtime) Step(ctx context.Context, expr Expr) (Object, error) {
+	var options stepOptions
+	if o, ok := ctx.Value("step_options").(*stepOptions); ok {
+		options = *o
+	}
+	_ = options
 	// TODO - get step option from context here -
 	// TODO - something is like - parallel, tail_call_optimization, error, or deadline, or implement my own context class
+	deadline, ok := ctx.Deadline()
+	if ok && time.Now().After(deadline) {
+		return nil, TimeoutError
+	}
 	select {
 	case <-ctx.Done():
 		return nil, InterruptError

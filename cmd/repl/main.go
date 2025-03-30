@@ -40,10 +40,14 @@ func main() {
 			cancel()
 			switch sig {
 			case syscall.SIGINT:
-				replMtx.Lock()
-				output := repl.ClearBuffer()
-				replMtx.Unlock()
-				_, _ = fmt.Fprint(os.Stderr, "    "+output)
+				func() {
+					replMtx.Lock()
+					defer replMtx.Unlock()
+					output := repl.ClearBuffer()
+					if output != "" {
+						_, _ = fmt.Fprint(os.Stderr, "    "+output)
+					}
+				}()
 			case syscall.SIGTERM:
 				os.Exit(0)
 			}
@@ -54,10 +58,14 @@ func main() {
 		line, err := rl.Readline()
 		if err != nil {
 			if errors.Is(err, readline.ErrInterrupt) { // handle syscall.SIGINT when receiving input
-				replMtx.Lock()
-				output := repl.ClearBuffer()
-				replMtx.Unlock()
-				_, _ = fmt.Fprint(os.Stderr, "    "+output)
+				func() {
+					replMtx.Lock()
+					defer replMtx.Unlock()
+					output := repl.ClearBuffer()
+					if output != "" {
+						_, _ = fmt.Fprint(os.Stderr, "    "+output)
+					}
+				}()
 				continue
 			} else if err == io.EOF { // handle syscall.SIGTERM when receiving input
 				os.Exit(0)
@@ -65,19 +73,20 @@ func main() {
 			panic(err)
 		}
 		ctx, cancel = context.WithCancel(context.Background())
+		func() {
+			defer cancel()
+			replMtx.Lock()
+			defer replMtx.Unlock()
+			output, executed := repl.ReplyInput(ctx, line)
+			if output != "" {
+				_, _ = fmt.Fprint(os.Stderr, "    "+output)
+			}
+			if executed {
+				rl.SetPrompt(">>> ") // reset prompt if command is executed
+			} else {
+				rl.SetPrompt("    ") // otherwise
+			}
+		}()
 
-		replMtx.Lock()
-		output, executed := repl.ReplyInput(ctx, line)
-		replMtx.Unlock()
-
-		if output != "" {
-			_, _ = fmt.Fprint(os.Stderr, "    "+output)
-		}
-
-		if executed {
-			rl.SetPrompt(">>> ") // reset prompt if command is executed
-		} else {
-			rl.SetPrompt("    ") // otherwise
-		}
 	}
 }

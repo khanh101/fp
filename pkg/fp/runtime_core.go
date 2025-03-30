@@ -112,7 +112,7 @@ var InterruptError = Interrupt{}
 // let, Lambda, case, sign, sub, add, tail
 func (r *Runtime) Step(ctx context.Context, expr Expr) (Object, error) {
 	// TODO - get step option from context here -
-	// something is like - parallel, tail_call_optimization, error, or deadline, or implement my own context class
+	// TODO - something is like - parallel, tail_call_optimization, error, or deadline, or implement my own context class
 	select {
 	case <-ctx.Done():
 		return nil, InterruptError

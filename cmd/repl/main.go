@@ -18,20 +18,17 @@ type signalCtx struct {
 }
 
 func (ctx *signalCtx) Value(key any) any {
-	//TODO implement me
-	panic("implement me")
+	return nil
 }
 
 func (ctx *signalCtx) Done() <-chan struct{} {
 	return ctx.interrupt
 }
 func (ctx *signalCtx) Deadline() (deadline time.Time, ok bool) {
-	//TODO implement me
-	panic("implement me")
+	return time.Time{}, false
 }
 func (ctx *signalCtx) Err() error {
-	//TODO implement me
-	panic("implement me")
+	return nil
 }
 
 func main() {

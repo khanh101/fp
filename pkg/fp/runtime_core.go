@@ -110,6 +110,9 @@ type stepOptions struct {
 // Step - implement minimal set of instructions for the language to be Turing complete
 // let, Lambda, case, sign, sub, add, tail
 func (r *Runtime) Step(ctx context.Context, expr Expr) (Object, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	var options stepOptions
 	if o, ok := ctx.Value("step_options").(*stepOptions); ok {
 		options = *o

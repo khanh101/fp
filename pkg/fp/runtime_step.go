@@ -36,20 +36,24 @@ type stepOptions struct {
 	tailCall bool
 }
 
+func getOptionsFromContext(ctx context.Context) *stepOptions {
+	if o, ok := ctx.Value("step_options").(*stepOptions); ok {
+		return o
+	}
+	// return default option
+	return &stepOptions{
+		tailCall: false,
+	}
+}
+
 // Step -
 func (r *Runtime) Step(ctx context.Context, expr Expr) (Object, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	options := stepOptions{
-		tailCall: false,
-	}
-	if o, ok := ctx.Value("step_options").(*stepOptions); ok {
-		options = *o
-	}
-	// NOTE - context might not be useful right now but in the future, if we want to parallelize things, it will be essential
-	// TODO - get step option from context here -
-	// TODO - something is like - parallel, tail_call_optimization, error, or deadline, or implement my own context class
+
+	options := getOptionsFromContext(ctx)
+
 	deadline, ok := ctx.Deadline()
 	if ok && time.Now().After(deadline) {
 		return nil, TimeoutError
@@ -122,7 +126,8 @@ func (r *Runtime) stepMany(ctx context.Context, exprList ...Expr) ([]Object, err
 		for i, expr := range exprList {
 			if TAILCALL_OPTIMIZATION {
 				if i == len(exprList)-1 && len(exprList) > 1 {
-					opts := &stepOptions{tailCall: true}
+					opts := getOptionsFromContext(ctx)
+					opts.tailCall = true
 					ctx = context.WithValue(ctx, "step_options", opts)
 				}
 			}

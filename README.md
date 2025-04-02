@@ -39,11 +39,11 @@ in the code below, i gave an example with `(let x_v (print 2 5))` and `(func x_f
 
 - How to handle higher-order functions?
 
-higher-order function is already implemented
+implemented
 
 - Tail call optimization
 
-WIP - I couldn't get the logic right at the moment
+implemented
 
 - Parallel map
 

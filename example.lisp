@@ -113,3 +113,13 @@
 
 (if (gt x 2) (lambda 5) (lambda 6))
 
+// factorial //  test TCO
+
+(
+    let fac (lambda x (
+        case x
+        0 1
+        _ (mul x (fac (sub x 1)))
+    ))
+)
+

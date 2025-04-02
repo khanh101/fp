@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"fp/pkg/fp"
 	"os"
@@ -25,7 +26,7 @@ func main() {
 	}
 	sort.Strings(funcNameList)
 	for _, name := range funcNameList {
-		o, err := r.Step(fp.Name(name), nil)
+		o, err := r.Step(context.Background(), fp.Name(name))
 		if err != nil {
 			panic(err)
 		}

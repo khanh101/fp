@@ -95,3 +95,21 @@
 // test map on list
 (let x (list 1 2 3))
 (map x (lambda y (add 1 y)))
+
+// if else statement
+(
+    let gt (lambda x y (sign (sub x y)))    // return 1 if x > y
+)
+
+(
+    let if (lambda x f g (                  // return (f) if x is 1 and (g) otherwise
+        case x
+        1 (f)
+        _ (g)
+    ))
+)
+
+(let x 3)
+
+(if (gt x 2) (lambda 5) (lambda 6))
+

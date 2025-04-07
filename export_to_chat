@@ -2,7 +2,6 @@
 
 echo "below is the readme and implementation of a simple functional programming language"
 
-find . -name "*.md" -type f -print -exec cat {} \;
 find . -name "*.go" -type f -print -exec cat {} \;
 find . -name "*.lisp" -type f -print -exec cat {} \;
 

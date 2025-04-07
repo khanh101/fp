@@ -68,7 +68,7 @@ func (r *Runtime) Step(ctx context.Context, expr Expr) (Object, error) {
 		return nil, InterruptError
 	default:
 		switch expr := expr.(type) {
-		case Name:
+		case NameExpr:
 			var v Object
 			// parse name
 			v, err := r.parseLiteral(String(expr))
@@ -147,6 +147,7 @@ func (r *Runtime) stepMany(ctx context.Context, exprList ...Expr) ([]Object, err
 package fp
 
 import (
+	"errors"
 	"strconv"
 )
 
@@ -154,11 +155,17 @@ import (
 func NewCoreRuntime() *Runtime {
 	return (&Runtime{
 		parseLiteral: func(lit String) (Object, error) {
+			if len(lit) == 0 {
+				return nil, errors.New("empty literal")
+			}
 			if lit == "_" {
 				return Wildcard{}, nil
 			}
 			if lit == "*" {
 				return Unwrap{}, nil
+			}
+			if lit[0] == '"' && lit[len(lit)-1] == '"' {
+				return String(lit[1 : len(lit)-1]), nil
 			}
 			i, err := strconv.Atoi(lit.String())
 			return Int(i), err
@@ -202,62 +209,15 @@ func NewStdRuntime() *Runtime {
 		LoadExtension(doomExtension).
 		LoadExtension(timeExtension)
 }
-./pkg/fp/ast.go
-package fp
-
-// Expr : union of Name, LambdaExpr
-type Expr interface {
-	String() string
-	MustTypeExpr() struct{} // for type-safety every Expr must implement this
-}
-
-type Name string
-
-func (e Name) String() string {
-	return string(e)
-}
-
-func (e Name) MustTypeExpr() struct{} {
-	return struct{}{}
-}
-
-// LambdaExpr : S-expression
-type LambdaExpr struct {
-	Name Name
-	Args []Expr
-}
-
-func (e LambdaExpr) String() string {
-	s := ""
-	s += "("
-	s += e.Name.String()
-	for _, arg := range e.Args {
-		s += " " + arg.String()
-	}
-	s += ")"
-	return s
-}
-
-func (e LambdaExpr) MustTypeExpr() struct{} {
-	return struct{}{}
-}
-./pkg/fp/parser.go
+./pkg/fp/lexer.go
 package fp
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 )
 
 type Token = string
-
-func pop(tokenList []Token) ([]Token, Token, error) {
-	if len(tokenList) == 0 {
-		return nil, "", errors.New("empty token list")
-	}
-	return tokenList[1:], tokenList[0], nil
-}
 
 func removeComments(str string) string {
 	lines := strings.Split(str, "\n")
@@ -285,12 +245,61 @@ func processSpecialChar(str string) string {
 	return newStr
 }
 
-// Tokenize : TODO - process raw string ""
+// Tokenize : TODO - process raw string with double quote using json
 func Tokenize(str string) []Token {
 	str = removeComments(str)
 	str = processSpecialChar(str)
 	// tokenize
 	return strings.Fields(str)
+}
+./pkg/fp/parser.go
+package fp
+
+import (
+	"errors"
+)
+
+// Expr : union of NameExpr, LambdaExpr
+type Expr interface {
+	String() string
+	MustTypeExpr() // for type-safety every Expr must implement this
+}
+
+type NameExpr string
+
+func (e NameExpr) String() string {
+	return string(e)
+}
+
+func (e NameExpr) MustTypeExpr() {
+}
+
+// LambdaExpr : S-expression
+type LambdaExpr struct {
+	Name NameExpr
+	Args []Expr
+}
+
+func (e LambdaExpr) String() string {
+	s := ""
+	s += "("
+	s += e.Name.String()
+	for _, arg := range e.Args {
+		s += " " + arg.String()
+	}
+	s += ")"
+	return s
+}
+
+func (e LambdaExpr) MustTypeExpr() {
+
+}
+
+func pop(tokenList []Token) ([]Token, Token, error) {
+	if len(tokenList) == 0 {
+		return nil, "", errors.New("empty token list")
+	}
+	return tokenList[1:], tokenList[0], nil
 }
 
 func ParseAll(tokenList []Token) ([]Expr, []Token) {
@@ -364,11 +373,11 @@ func parseSingle(tokenList []Token) (Expr, []Token, error) {
 				exprList = append(exprList, expr)
 			}
 			return LambdaExpr{
-				Name: Name(funcName),
+				Name: NameExpr(funcName),
 				Args: exprList,
 			}, tokenList, false, nil
 		default:
-			return Name(head), tokenList, head == ")", nil
+			return NameExpr(head), tokenList, head == ")", nil
 		}
 	}
 
@@ -396,7 +405,7 @@ var letModule = Module{
 		if len(expr.Args) < 2 {
 			return nil, fmt.Errorf("not enough arguments for let")
 		}
-		name := String(expr.Args[0].(Name))
+		name := String(expr.Args[0].(NameExpr))
 		outputs, err := r.stepMany(ctx, expr.Args[1:]...)
 		if err != nil {
 			return nil, err
@@ -413,7 +422,7 @@ var delModule = Module{
 		if len(expr.Args) < 1 {
 			return nil, fmt.Errorf("not enough arguments for del")
 		}
-		name := String(expr.Args[0].(Name))
+		name := String(expr.Args[0].(NameExpr))
 		_, err := r.stepMany(ctx, expr.Args[1:]...)
 		if err != nil {
 			return nil, err
@@ -433,7 +442,7 @@ var lambdaModule = Module{
 			Frame:  nil,
 		}
 		for i := 0; i < len(expr.Args)-1; i++ {
-			paramName := String(expr.Args[i].(Name))
+			paramName := String(expr.Args[i].(NameExpr))
 			v.Params = append(v.Params, paramName)
 		}
 		v.Impl = expr.Args[len(expr.Args)-1]
@@ -763,7 +772,7 @@ var mapModule = Module{
 				// 3. make dummy expr and exec
 				o, err := f.Exec(ctx, r, LambdaExpr{
 					Name: "",
-					Args: []Expr{Name("x")}, // dummy variable
+					Args: []Expr{NameExpr("x")}, // dummy variable
 				})
 				// 5. pop Frame from Stack
 				r.Stack = r.Stack[:len(r.Stack)-1]
@@ -950,7 +959,7 @@ import (
 // Object : union - TODO : introduce new data types
 type Object interface {
 	String() string
-	MustTypeObject() struct{} // for type-safety every Object must implement this
+	MustTypeObject() // for type-safety every Object must implement this
 }
 
 func getType(o Object) String {
@@ -983,9 +992,7 @@ func (i Int) String() string {
 	return fmt.Sprintf("%d", i)
 }
 
-func (i Int) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (i Int) MustTypeObject() {}
 
 type Dict map[Object]Object
 
@@ -1000,9 +1007,7 @@ func (d Dict) String() string {
 	return s
 }
 
-func (d Dict) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (d Dict) MustTypeObject() {}
 
 type Unwrap struct{}
 
@@ -1010,9 +1015,7 @@ func (u Unwrap) String() string {
 	return "*"
 }
 
-func (u Unwrap) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (u Unwrap) MustTypeObject() {}
 
 type Wildcard struct{}
 
@@ -1020,9 +1023,7 @@ func (w Wildcard) String() string {
 	return "_"
 }
 
-func (w Wildcard) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (w Wildcard) MustTypeObject() {}
 
 type String string
 
@@ -1030,9 +1031,7 @@ func (s String) String() string {
 	return string(s)
 }
 
-func (s String) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (s String) MustTypeObject() {}
 
 type Lambda struct {
 	Params []String `json:"params,omitempty"`
@@ -1050,9 +1049,7 @@ func (l Lambda) String() string {
 	return s
 }
 
-func (l Lambda) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (l Lambda) MustTypeObject() {}
 
 type Module struct {
 	Name String `json:"name,omitempty"`
@@ -1064,9 +1061,7 @@ func (m Module) String() string {
 	return m.Man
 }
 
-func (m Module) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (m Module) MustTypeObject() {}
 
 type List []Object
 
@@ -1080,9 +1075,7 @@ func (l List) String() string {
 	return s
 }
 
-func (l List) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (l List) MustTypeObject() {}
 ./pkg/repl/repl.go
 package repl
 

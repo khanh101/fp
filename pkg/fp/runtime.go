@@ -1,6 +1,7 @@
 package fp
 
 import (
+	"errors"
 	"strconv"
 )
 
@@ -8,11 +9,17 @@ import (
 func NewCoreRuntime() *Runtime {
 	return (&Runtime{
 		parseLiteral: func(lit String) (Object, error) {
+			if len(lit) == 0 {
+				return nil, errors.New("empty literal")
+			}
 			if lit == "_" {
 				return Wildcard{}, nil
 			}
 			if lit == "*" {
 				return Unwrap{}, nil
+			}
+			if lit[0] == '"' && lit[len(lit)-1] == '"' {
+				return String(lit[1 : len(lit)-1]), nil
 			}
 			i, err := strconv.Atoi(lit.String())
 			return Int(i), err

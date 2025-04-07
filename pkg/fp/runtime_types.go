@@ -10,7 +10,7 @@ import (
 // Object : union - TODO : introduce new data types
 type Object interface {
 	String() string
-	MustTypeObject() struct{} // for type-safety every Object must implement this
+	MustTypeObject() // for type-safety every Object must implement this
 }
 
 func getType(o Object) String {
@@ -43,9 +43,7 @@ func (i Int) String() string {
 	return fmt.Sprintf("%d", i)
 }
 
-func (i Int) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (i Int) MustTypeObject() {}
 
 type Dict map[Object]Object
 
@@ -60,9 +58,7 @@ func (d Dict) String() string {
 	return s
 }
 
-func (d Dict) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (d Dict) MustTypeObject() {}
 
 type Unwrap struct{}
 
@@ -70,9 +66,7 @@ func (u Unwrap) String() string {
 	return "*"
 }
 
-func (u Unwrap) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (u Unwrap) MustTypeObject() {}
 
 type Wildcard struct{}
 
@@ -80,9 +74,7 @@ func (w Wildcard) String() string {
 	return "_"
 }
 
-func (w Wildcard) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (w Wildcard) MustTypeObject() {}
 
 type String string
 
@@ -90,9 +82,7 @@ func (s String) String() string {
 	return string(s)
 }
 
-func (s String) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (s String) MustTypeObject() {}
 
 type Lambda struct {
 	Params []String `json:"params,omitempty"`
@@ -110,9 +100,7 @@ func (l Lambda) String() string {
 	return s
 }
 
-func (l Lambda) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (l Lambda) MustTypeObject() {}
 
 type Module struct {
 	Name String `json:"name,omitempty"`
@@ -124,9 +112,7 @@ func (m Module) String() string {
 	return m.Man
 }
 
-func (m Module) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (m Module) MustTypeObject() {}
 
 type List []Object
 
@@ -140,6 +126,4 @@ func (l List) String() string {
 	return s
 }
 
-func (l List) MustTypeObject() struct{} {
-	return struct{}{}
-}
+func (l List) MustTypeObject() {}

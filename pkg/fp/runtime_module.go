@@ -12,7 +12,7 @@ var letModule = Module{
 		if len(expr.Args) < 2 {
 			return nil, fmt.Errorf("not enough arguments for let")
 		}
-		name := String(expr.Args[0].(Name))
+		name := String(expr.Args[0].(NameExpr))
 		outputs, err := r.stepMany(ctx, expr.Args[1:]...)
 		if err != nil {
 			return nil, err
@@ -29,7 +29,7 @@ var delModule = Module{
 		if len(expr.Args) < 1 {
 			return nil, fmt.Errorf("not enough arguments for del")
 		}
-		name := String(expr.Args[0].(Name))
+		name := String(expr.Args[0].(NameExpr))
 		_, err := r.stepMany(ctx, expr.Args[1:]...)
 		if err != nil {
 			return nil, err
@@ -49,7 +49,7 @@ var lambdaModule = Module{
 			Frame:  nil,
 		}
 		for i := 0; i < len(expr.Args)-1; i++ {
-			paramName := String(expr.Args[i].(Name))
+			paramName := String(expr.Args[i].(NameExpr))
 			v.Params = append(v.Params, paramName)
 		}
 		v.Impl = expr.Args[len(expr.Args)-1]
@@ -379,7 +379,7 @@ var mapModule = Module{
 				// 3. make dummy expr and exec
 				o, err := f.Exec(ctx, r, LambdaExpr{
 					Name: "",
-					Args: []Expr{Name("x")}, // dummy variable
+					Args: []Expr{NameExpr("x")}, // dummy variable
 				})
 				// 5. pop Frame from Stack
 				r.Stack = r.Stack[:len(r.Stack)-1]

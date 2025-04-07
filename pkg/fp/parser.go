@@ -2,51 +2,49 @@ package fp
 
 import (
 	"errors"
-	"fmt"
-	"strings"
 )
 
-type Token = string
+// Expr : union of NameExpr, LambdaExpr
+type Expr interface {
+	String() string
+	MustTypeExpr() // for type-safety every Expr must implement this
+}
+
+type NameExpr string
+
+func (e NameExpr) String() string {
+	return string(e)
+}
+
+func (e NameExpr) MustTypeExpr() {
+}
+
+// LambdaExpr : S-expression
+type LambdaExpr struct {
+	Name NameExpr
+	Args []Expr
+}
+
+func (e LambdaExpr) String() string {
+	s := ""
+	s += "("
+	s += e.Name.String()
+	for _, arg := range e.Args {
+		s += " " + arg.String()
+	}
+	s += ")"
+	return s
+}
+
+func (e LambdaExpr) MustTypeExpr() {
+
+}
 
 func pop(tokenList []Token) ([]Token, Token, error) {
 	if len(tokenList) == 0 {
 		return nil, "", errors.New("empty token list")
 	}
 	return tokenList[1:], tokenList[0], nil
-}
-
-func removeComments(str string) string {
-	lines := strings.Split(str, "\n")
-	var newLines []string
-	for _, line := range lines {
-		newLines = append(newLines, strings.Split(line, "//")[0])
-	}
-	return strings.Join(newLines, "\n")
-}
-
-func processSpecialChar(str string) string {
-	specialChars := map[rune]struct{}{
-		'(': {},
-		')': {},
-		'*': {}, // unwrap symbol
-	}
-	newStr := ""
-	for _, ch := range str {
-		if _, ok := specialChars[ch]; ok {
-			newStr += fmt.Sprintf(" %c ", ch)
-		} else {
-			newStr += string(ch)
-		}
-	}
-	return newStr
-}
-
-// Tokenize : TODO - process raw string ""
-func Tokenize(str string) []Token {
-	str = removeComments(str)
-	str = processSpecialChar(str)
-	// tokenize
-	return strings.Fields(str)
 }
 
 func ParseAll(tokenList []Token) ([]Expr, []Token) {
@@ -120,11 +118,11 @@ func parseSingle(tokenList []Token) (Expr, []Token, error) {
 				exprList = append(exprList, expr)
 			}
 			return LambdaExpr{
-				Name: Name(funcName),
+				Name: NameExpr(funcName),
 				Args: exprList,
 			}, tokenList, false, nil
 		default:
-			return Name(head), tokenList, head == ")", nil
+			return NameExpr(head), tokenList, head == ")", nil
 		}
 	}
 

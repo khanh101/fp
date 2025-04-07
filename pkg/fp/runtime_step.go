@@ -66,7 +66,7 @@ func (r *Runtime) Step(ctx context.Context, expr Expr) (Object, error) {
 		return nil, InterruptError
 	default:
 		switch expr := expr.(type) {
-		case Name:
+		case NameExpr:
 			var v Object
 			// parse name
 			v, err := r.parseLiteral(String(expr))

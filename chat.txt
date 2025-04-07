@@ -1,5 +1,5 @@
 below is the readme and implementation of a simple functional programming language
-./pkg//fp/runtime_step.go
+./pkg/fp/runtime_step.go
 package fp
 
 import (
@@ -143,7 +143,7 @@ func (r *Runtime) stepMany(ctx context.Context, exprList ...Expr) ([]Object, err
 	}
 	return outputs, nil
 }
-./pkg//fp/runtime.go
+./pkg/fp/runtime.go
 package fp
 
 import (
@@ -202,7 +202,7 @@ func NewStdRuntime() *Runtime {
 		LoadExtension(doomExtension).
 		LoadExtension(timeExtension)
 }
-./pkg//fp/ast.go
+./pkg/fp/ast.go
 package fp
 
 // Expr : union of Name, LambdaExpr
@@ -241,7 +241,7 @@ func (e LambdaExpr) String() string {
 func (e LambdaExpr) MustTypeExpr() struct{} {
 	return struct{}{}
 }
-./pkg//fp/parser.go
+./pkg/fp/parser.go
 package fp
 
 import (
@@ -381,7 +381,7 @@ func parseSingle(tokenList []Token) (Expr, []Token, error) {
 	}
 	return expr, tokenList, nil
 }
-./pkg//fp/runtime_module.go
+./pkg/fp/runtime_module.go
 package fp
 
 import (
@@ -850,7 +850,7 @@ var timeExtension = Extension{
 	},
 	Man: "(time) - get current time",
 }
-./pkg//fp/runtime_core.go
+./pkg/fp/runtime_core.go
 package fp
 
 import (
@@ -937,7 +937,7 @@ func (r *Runtime) LoadExtension(e Extension) *Runtime {
 		Man: e.Man,
 	})
 }
-./pkg//fp/runtime_types.go
+./pkg/fp/runtime_types.go
 package fp
 
 import (
@@ -1083,7 +1083,7 @@ func (l List) String() string {
 func (l List) MustTypeObject() struct{} {
 	return struct{}{}
 }
-./pkg//repl/repl.go
+./pkg/repl/repl.go
 package repl
 
 import (

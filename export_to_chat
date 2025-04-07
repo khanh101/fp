@@ -2,6 +2,6 @@
 
 echo "below is the readme and implementation of a simple functional programming language"
 
-find ./pkg/ -name "*.go" -type f -print -exec cat {} \;
+find ./pkg -name "*.go" -type f -print -exec cat {} \;
 
 echo "do you have any comment on this?"

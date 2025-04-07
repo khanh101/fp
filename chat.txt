@@ -1,253 +1,5 @@
 below is the readme and implementation of a simple functional programming language
-./cmd/man/main.go
-package main
-
-import (
-	"context"
-	"fmt"
-	"fp/pkg/fp"
-	"os"
-	"sort"
-)
-
-func write(format string, args ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stderr, format, args...)
-	_ = os.Stderr.Sync() // flush
-}
-
-func writeln(format string, args ...interface{}) {
-	write(format+"\n", args...)
-}
-
-func main() {
-	r := fp.NewStdRuntime()
-	writeln("welcome to fp repl! type function or module name for help")
-	var funcNameList []string
-	for k := range r.Stack[0] {
-		funcNameList = append(funcNameList, string(k))
-	}
-	sort.Strings(funcNameList)
-	for _, name := range funcNameList {
-		o, err := r.Step(context.Background(), fp.Name(name))
-		if err != nil {
-			panic(err)
-		}
-		writeln(">>>%s", name)
-		writeln("%v", o)
-	}
-}
-./cmd/test/main.go
-package main
-
-import (
-	"fmt"
-	"strings"
-	"unicode"
-)
-
-func splitWords(input string) []string {
-	var result []string
-	var word strings.Builder
-	inQuotes := false
-	i := 0
-	for i < len(input) {
-		char := input[i]
-
-		if char == '\\' && i+1 < len(input) { // Handle escaped characters
-			nextChar := input[i+1]
-			switch nextChar {
-			case 'n':
-				word.WriteByte('\n')
-			case 't':
-				word.WriteByte('\t')
-			case 'r':
-				word.WriteByte('\r')
-			case '"':
-				word.WriteByte('"')
-			case '\\':
-				word.WriteByte('\\')
-			default:
-				word.WriteByte(nextChar)
-			}
-			i += 2
-			continue
-		}
-
-		if char == '"' { // Handle quoted strings
-			inQuotes = !inQuotes
-			i++
-			continue
-		}
-
-		if unicode.IsSpace(rune(char)) && !inQuotes { // Split on whitespace outside quotes
-			if word.Len() > 0 {
-				result = append(result, word.String())
-				word.Reset()
-			}
-			i++
-			continue
-		}
-
-		word.WriteByte(char)
-		i++
-	}
-
-	if word.Len() > 0 {
-		result = append(result, word.String())
-	}
-
-	return result
-}
-
-func main() {
-	input := "hello world \"this is a \\\"quoted\\\" string\" test\nnew line\ttab"
-	words := splitWords(input)
-	for _, w := range words {
-		fmt.Println(w)
-	}
-
-	// Output: ["hello" "world" "this is a \"quoted\" string" "test"]
-}
-./cmd/repl/main.go
-package main
-
-import (
-	"context"
-	"errors"
-	"fmt"
-	"fp/pkg/fp"
-	"fp/pkg/repl"
-	"github.com/chzyer/readline"
-	"io"
-	"os"
-	"os/signal"
-	"sync"
-	"syscall"
-)
-
-func main() {
-	replMtx := &sync.Mutex{}
-	repl, welcome := repl.NewFP(fp.NewStdRuntime())
-	_, _ = fmt.Fprintf(os.Stderr, welcome)
-
-	rl, err := readline.NewEx(&readline.Config{
-		Prompt:          ">>> ",                 // Default prompt
-		HistoryFile:     "/tmp/fp_repl_history", // Save command history
-		InterruptPrompt: "^C",
-	})
-	if err != nil {
-		panic(err)
-	}
-	defer rl.Close()
-
-	var ctx context.Context
-	var cancel context.CancelFunc = func() {}
-
-	signalCh := make(chan os.Signal, 1)
-	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		// receive SIGINT, SIGTERM when running code -> stop code
-		for range signalCh {
-			cancel()
-		}
-	}()
-
-	for {
-		line, err := rl.Readline()
-		if err != nil {
-			if errors.Is(err, readline.ErrInterrupt) {
-				// receive SIGINT when typing -> clear buffer
-				func() {
-					replMtx.Lock()
-					defer replMtx.Unlock()
-					output := repl.ClearBuffer()
-					if output != "" {
-						_, _ = fmt.Fprint(os.Stderr, "    "+output)
-					}
-				}()
-				continue
-			} else if err == io.EOF {
-				// receive SIGTERM when typing -> exit
-				os.Exit(0)
-			}
-			panic(err)
-		}
-		ctx, cancel = context.WithCancel(context.Background())
-		func() {
-			defer cancel()
-			replMtx.Lock()
-			defer replMtx.Unlock()
-			output, executed := repl.ReplyInput(ctx, line)
-			if output != "" {
-				_, _ = fmt.Fprint(os.Stderr, "    "+output)
-			}
-			contextCancelled := false
-			select {
-			case <-ctx.Done():
-				contextCancelled = true
-			default:
-			}
-			if executed || contextCancelled {
-				rl.SetPrompt(">>> ") // reset prompt if command is executed
-			} else {
-				rl.SetPrompt("    ") // otherwise
-			}
-		}()
-
-	}
-}
-./web_repl/main.go
-package main
-
-import (
-	"context"
-	"fmt"
-	"fp/pkg/fp"
-	"fp/pkg/repl"
-	"strings"
-	"syscall/js"
-)
-
-var r repl.REPL
-
-func write(format string, a ...interface{}) {
-	output := fmt.Sprintf(format, a...)
-	output = strings.ReplaceAll(output, "\n", "<br>")
-	js.Global().Call("updateOutput", output)
-}
-
-func evaluate(this js.Value, p []js.Value) interface{} {
-	if len(p) == 0 {
-		return js.ValueOf("no input")
-	}
-	input := p[0].String()
-
-	// repl here
-	output, _ := r.ReplyInput(context.Background(), input)
-	// end repl here
-
-	output = strings.ReplaceAll(output, "\n", "<br>")
-	return output
-}
-
-// Go function to handle buffer clearing
-func clearBuffer(this js.Value, p []js.Value) interface{} {
-	write(r.ClearBuffer())
-	return nil
-}
-
-func main() {
-	// initialize
-	var welcome string
-	r, welcome = repl.NewFP(fp.NewStdRuntime())
-	write(welcome)
-
-	js.Global().Set("evaluate", js.FuncOf(evaluate))
-	js.Global().Set("clearBuffer", js.FuncOf(clearBuffer))
-	// Keep WebAssembly running
-	select {}
-}
-./pkg/fp/runtime_step.go
+./pkg//fp/runtime_step.go
 package fp
 
 import (
@@ -391,7 +143,7 @@ func (r *Runtime) stepMany(ctx context.Context, exprList ...Expr) ([]Object, err
 	}
 	return outputs, nil
 }
-./pkg/fp/runtime.go
+./pkg//fp/runtime.go
 package fp
 
 import (
@@ -450,7 +202,7 @@ func NewStdRuntime() *Runtime {
 		LoadExtension(doomExtension).
 		LoadExtension(timeExtension)
 }
-./pkg/fp/ast.go
+./pkg//fp/ast.go
 package fp
 
 // Expr : union of Name, LambdaExpr
@@ -489,7 +241,7 @@ func (e LambdaExpr) String() string {
 func (e LambdaExpr) MustTypeExpr() struct{} {
 	return struct{}{}
 }
-./pkg/fp/parser.go
+./pkg//fp/parser.go
 package fp
 
 import (
@@ -629,7 +381,7 @@ func parseSingle(tokenList []Token) (Expr, []Token, error) {
 	}
 	return expr, tokenList, nil
 }
-./pkg/fp/runtime_module.go
+./pkg//fp/runtime_module.go
 package fp
 
 import (
@@ -1098,7 +850,7 @@ var timeExtension = Extension{
 	},
 	Man: "(time) - get current time",
 }
-./pkg/fp/runtime_core.go
+./pkg//fp/runtime_core.go
 package fp
 
 import (
@@ -1185,7 +937,7 @@ func (r *Runtime) LoadExtension(e Extension) *Runtime {
 		Man: e.Man,
 	})
 }
-./pkg/fp/runtime_types.go
+./pkg//fp/runtime_types.go
 package fp
 
 import (
@@ -1331,7 +1083,7 @@ func (l List) String() string {
 func (l List) MustTypeObject() struct{} {
 	return struct{}{}
 }
-./pkg/repl/repl.go
+./pkg//repl/repl.go
 package repl
 
 import (
@@ -1421,130 +1173,4 @@ func NewFP(runtime *fp.Runtime) (repl REPL, welcome string) {
 	r.writeln("")
 	return r, r.flush()
 }
-./example.lisp
-// define multiplication
-(let mul
-    (lambda x y
-        (case (sign y)                         // mul: (x y) -> xy
-            0 0                                             // if y = 0, return 0
-            -1 (sub 0 (mul x (sub 0 y)))                    // if y < 0, return 0 - x(-y)
-            +1 (add x (mul x (sub y 1)))                    // if y > 0, return x + x(y-1)
-        )
-    )
-)
-
-// define modulo
-(let mod
-    (lambda x y
-        (tail                                  // mul: (x y) -> x % y // defined only for positive y
-            (let z (sub x y))                               // local var z = x - y
-            (print z x y 6)                                // print local value of z (with label 6)
-            (case (sign z)
-                +1 (mod z y)                                // if x > y, return (x - y) % y
-                0  0                                        // if x = y, return 0
-                -1 x                                        // if x < y, return x
-            )
-        )
-    )
-)
-
-
-
-
-// partial function using lambda
-(let addx
-    (lambda x
-        (lambda y (add x y))
-    )
-)
-
-// dict_new
-(let dict_new (lambda (lambda x 0)))
-// dict_get d[x]
-(let dict_get (lambda d x (d x)))
-
-// dict_set d[x] = y
-(let dict_set (lambda d x y (
-    lambda z (
-        case z
-            x y
-            _ (dict_get d z)
-    )
-)))
-
-(let z 20)
-(print z 1)                                            // print z=20 (with label 1)
-(print (mul 13 -17) 2)                                 // print 13 * (-17) (with label 2)
-(print (mod 17  13) 3)                                 // print 17 % 13 (with label 3)
-(print z 4)                                            // print z=20 again (with label 4), verify that the other z is an actual local variable
-
-(let x_v (print 2 5))                                  // declare x_v - (print 2 5) is executed immediately
-(let x_f (lambda (print 2 6)))                         // declare x_f - (print 2 6) is not executed immediately
-(print 7)                                              // for debugging
-(x_f)                                                   // apply x_f - (print 2 6) is executed
-
-(let f (lambda x (add x 1)))                            // define lambda
-(print f)                                              // print lambda
-(print (f 21) 8)                                       // print 21 + 1 using lambda
-
-(let t 3)
-(let add3 (addx t))                                     // partial function
-(print (add3 14) 9)
-
-
-(print (div 6 2))                                      // test extension
-
-(let l (list 1 2 3 5 -7))                        // test list
-(let l (append l 6))
-(print l)
-
-
-// define fibonacci
-
-(let fib
-    (lambda x
-        (case (sign (sub x 1))
-            1 (tail
-                (let y (fib (sub x 1)))
-                (let z (fib (sub x 2)))
-                (add y z)
-            )
-            _ x
-        )
-    )
-)
-
-(print (fib 20) 11)                                // print the 20-th fibonacci
-
-// test map on list
-(let x (list 1 2 3))
-(map x (lambda y (add 1 y)))
-
-// if else statement
-(
-    let gt (lambda x y (sign (sub x y)))    // return 1 if x > y
-)
-
-(
-    let if (lambda x f g (                  // return (f) if x is 1 and (g) otherwise
-        case x
-        1 (f)
-        _ (g)
-    ))
-)
-
-(let x 3)
-
-(if (gt x 2) (lambda 5) (lambda 6))
-
-//test TCO
-
-(
-    let count (lambda n (
-        case n
-        0 0
-        _ (add 1 (count (sub n 1)))
-    ))
-)
-
 do you have any comment on this?

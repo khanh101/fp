@@ -232,6 +232,7 @@ func processSpecialChar(str string) string {
 	specialChars := map[rune]struct{}{
 		'(': {},
 		')': {},
+		'_': {}, // wildcard symbol
 		'*': {}, // unwrap symbol
 	}
 	newStr := ""

@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	DETECT_NONPURE        = false
+	SIMPLE_DETECT_NONPURE = false
 	MAX_STACK_DEPTH       = 1000
 	TAILCALL_OPTIMIZATION = true
 )
@@ -19,7 +19,7 @@ const (
 func (r *Runtime) searchOnStack(name String) (Object, error) {
 	for i := len(r.Stack) - 1; i >= 0; i-- {
 		if o, ok := r.Stack[i][name]; ok {
-			if DETECT_NONPURE {
+			if SIMPLE_DETECT_NONPURE {
 				if i != 0 && i < len(r.Stack)-1 {
 					_, _ = fmt.Fprintf(os.Stderr, "non-pure function")
 				}
@@ -38,14 +38,18 @@ type stepOptions struct {
 	tailCall bool
 }
 
-func getOptionsFromContext(ctx context.Context) *stepOptions {
+func getOptionsFromContext(ctx context.Context) (*stepOptions, bool) {
 	if o, ok := ctx.Value("step_options").(*stepOptions); ok {
-		return o
+		return o, true
 	}
-	// return default option
+	// default option
 	return &stepOptions{
 		tailCall: false,
-	}
+	}, false
+}
+
+func setOptionsToContext(ctx context.Context, o *stepOptions) context.Context {
+	return context.WithValue(ctx, "step_options", o)
 }
 
 // Step -
@@ -54,7 +58,7 @@ func (r *Runtime) Step(ctx context.Context, expr Expr) (Object, error) {
 		return nil, ctx.Err()
 	}
 
-	options := getOptionsFromContext(ctx)
+	options, _ := getOptionsFromContext(ctx)
 
 	deadline, ok := ctx.Deadline()
 	if ok && time.Now().After(deadline) {
@@ -128,9 +132,11 @@ func (r *Runtime) stepMany(ctx context.Context, exprList ...Expr) ([]Object, err
 		for i, expr := range exprList {
 			if TAILCALL_OPTIMIZATION {
 				if i == len(exprList)-1 && len(exprList) >= 2 { // TODO somehow if exprList is of length 1 then error
-					opts := getOptionsFromContext(ctx)
-					opts.tailCall = true
-					ctx = context.WithValue(ctx, "step_options", opts)
+					options, found := getOptionsFromContext(ctx)
+					options.tailCall = true
+					if !found {
+						ctx = setOptionsToContext(ctx, options)
+					}
 				}
 			}
 			v, err := r.Step(ctx, expr)

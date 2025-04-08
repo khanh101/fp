@@ -23,7 +23,7 @@ module: (let x 3) - assign value 3 to local variable x
 >>>list
 module: (list 1 2 (lambda x (add x 1))) - make a list
 >>>map
-module: (map l (lambda y (add 1 y))) - map
+module: (map l (lambda y (add 1 y))) - map or for loop
 >>>mod
 module: (mod 2 (add 1 1)) - exec two expressions and return modulo
 >>>mul
@@ -32,6 +32,8 @@ module: (mul 1 (add 2 3) 3) - exec a sequence of expressions and return the prod
 module: (peek l 3 2) - get elem from list (can get multiple elements) (list is 1-indexing)
 >>>print
 module: (print 1 x (lambda 3)) - print values
+>>>range
+module: (range 1 10) - return [1, 2, ..., 10]
 >>>sign
 module: (sign 3) - exec an expression and return the sign
 >>>slice

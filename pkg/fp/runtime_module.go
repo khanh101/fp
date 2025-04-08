@@ -394,10 +394,36 @@ var mapModule = Module{
 		}
 		return outputs, nil
 	},
-	Man: "module: (map l (lambda y (add 1 y))) - map",
+	Man: "module: (map l (lambda y (add 1 y))) - map or for loop",
 }
 
 // TODO - implement map filter reduce
+
+var rangeExtension = Extension{
+	Name: "range",
+	Exec: func(ctx context.Context, values ...Object) (Object, error) {
+		if len(values) < 2 {
+			return nil, fmt.Errorf("range requires at least 2 arguments")
+		}
+		low, ok := values[0].(Int)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be integer")
+		}
+		high, ok := values[1].(Int)
+		if !ok {
+			return nil, fmt.Errorf("second argument must be integer")
+		}
+		if low > high {
+			return nil, nil
+		}
+		var list List
+		for i := low; i <= high; i++ {
+			list = append(list, i)
+		}
+		return list, nil
+	},
+	Man: "module: (range 1 10) - return [1, 2, ..., 10]",
+}
 
 var typeExtension = Extension{
 	Name: "type",

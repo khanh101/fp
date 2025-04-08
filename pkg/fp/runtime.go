@@ -65,5 +65,6 @@ func NewStdRuntime() *Runtime {
 		LoadModule(stackModule).
 		LoadModule(kaboomModule).
 		LoadExtension(doomExtension).
-		LoadExtension(timeExtension)
+		LoadExtension(timeExtension).
+		LoadExtension(rangeExtension)
 }

@@ -1,6 +1,7 @@
 package fp
 
 import (
+	"encoding/json"
 	"errors"
 	"strconv"
 )
@@ -19,7 +20,11 @@ func NewCoreRuntime() *Runtime {
 				return Unwrap{}, nil
 			}
 			if lit[0] == '"' && lit[len(lit)-1] == '"' {
-				return String(lit[1 : len(lit)-1]), nil
+				str := ""
+				if err := json.Unmarshal([]byte(lit), &str); err != nil {
+					return nil, err
+				}
+				return String(str), nil
 			}
 			i, err := strconv.Atoi(lit.String())
 			return Int(i), err
@@ -58,7 +63,6 @@ func NewStdRuntime() *Runtime {
 		LoadModule(mapModule).
 		LoadExtension(typeExtension).
 		LoadModule(stackModule).
-		LoadExtension(unicodeExtension).
 		LoadModule(kaboomModule).
 		LoadExtension(doomExtension).
 		LoadExtension(timeExtension)

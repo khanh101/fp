@@ -3,6 +3,7 @@ package fp
 import (
 	"fmt"
 	"strings"
+	"unicode"
 )
 
 type Token = string
@@ -16,28 +17,58 @@ func removeComments(str string) string {
 	return strings.Join(newLines, "\n")
 }
 
-func processSpecialChar(str string) string {
-	specialChars := map[rune]struct{}{
-		'(': {},
-		')': {},
-		'_': {}, // wildcard symbol
-		'*': {}, // unwrap symbol
-	}
-	newStr := ""
-	for _, ch := range str {
-		if _, ok := specialChars[ch]; ok {
-			newStr += fmt.Sprintf(" %c ", ch)
-		} else {
-			newStr += string(ch)
-		}
-	}
-	return newStr
-}
-
-// Tokenize : TODO - process raw string with double quote using json
 func Tokenize(str string) []Token {
 	str = removeComments(str)
-	str = processSpecialChar(str)
-	// tokenize
-	return strings.Fields(str)
+
+	const (
+		STATE_OUTSTRING = iota
+		STATE_INSTRING
+		STATE_INSTRING_ESCAPE
+	)
+
+	var tokens []Token
+	state := STATE_OUTSTRING
+	buffer := ""
+	flushBuffer := func() {
+		if len(buffer) > 0 {
+			tokens = append(tokens, buffer)
+		}
+		buffer = ""
+	}
+	for _, ch := range str {
+		switch state {
+		case STATE_OUTSTRING:
+			if unicode.IsSpace(ch) {
+				flushBuffer()
+			} else if ch == '(' || ch == ')' || ch == '*' {
+				flushBuffer()
+				buffer += string(ch)
+				flushBuffer()
+			} else if ch == '"' {
+				flushBuffer()
+				buffer += string(ch)
+				state = STATE_INSTRING
+			} else {
+				buffer += string(ch)
+			}
+		case STATE_INSTRING:
+			if ch == '\\' {
+				buffer += string(ch)
+				state = STATE_INSTRING_ESCAPE
+			} else if ch == '"' {
+				buffer += string(ch)
+				flushBuffer()
+				state = STATE_OUTSTRING
+			} else {
+				buffer += string(ch)
+			}
+		case STATE_INSTRING_ESCAPE:
+			buffer += string(ch)
+			state = STATE_INSTRING
+		default:
+			panic(fmt.Sprintf("invalid state: %d", state))
+		}
+	}
+	flushBuffer()
+	return tokens
 }

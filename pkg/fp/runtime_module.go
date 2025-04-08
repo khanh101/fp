@@ -442,23 +442,6 @@ var printExtension = Extension{
 	Man: "module: (print 1 x (lambda 3)) - print values",
 }
 
-var unicodeExtension = Extension{
-	Name: "unicode",
-	Exec: func(ctx context.Context, values ...Object) (Object, error) {
-
-		var output String = ""
-		for _, v := range values {
-			if v, ok := v.(Int); ok {
-				output += String(fmt.Sprintf("%c", rune(v)))
-			} else {
-				return nil, fmt.Errorf("argument must be int")
-			}
-		}
-		return output, nil
-	},
-	Man: "module: (unicode 72 101 108 108 111 44 32 87 111 114 108 100 33) - convert a list of integers into string - this is just for hello world",
-}
-
 var timeExtension = Extension{
 	Name: "time",
 	Exec: func(ctx context.Context, values ...Object) (Object, error) {

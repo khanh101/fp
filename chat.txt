@@ -147,6 +147,7 @@ func (r *Runtime) stepMany(ctx context.Context, exprList ...Expr) ([]Object, err
 package fp
 
 import (
+	"encoding/json"
 	"errors"
 	"strconv"
 )
@@ -165,7 +166,11 @@ func NewCoreRuntime() *Runtime {
 				return Unwrap{}, nil
 			}
 			if lit[0] == '"' && lit[len(lit)-1] == '"' {
-				return String(lit[1 : len(lit)-1]), nil
+				str := ""
+				if err := json.Unmarshal([]byte(lit), &str); err != nil {
+					return nil, err
+				}
+				return String(str), nil
 			}
 			i, err := strconv.Atoi(lit.String())
 			return Int(i), err
@@ -204,7 +209,6 @@ func NewStdRuntime() *Runtime {
 		LoadModule(mapModule).
 		LoadExtension(typeExtension).
 		LoadModule(stackModule).
-		LoadExtension(unicodeExtension).
 		LoadModule(kaboomModule).
 		LoadExtension(doomExtension).
 		LoadExtension(timeExtension)
@@ -215,6 +219,7 @@ package fp
 import (
 	"fmt"
 	"strings"
+	"unicode"
 )
 
 type Token = string
@@ -228,30 +233,60 @@ func removeComments(str string) string {
 	return strings.Join(newLines, "\n")
 }
 
-func processSpecialChar(str string) string {
-	specialChars := map[rune]struct{}{
-		'(': {},
-		')': {},
-		'_': {}, // wildcard symbol
-		'*': {}, // unwrap symbol
-	}
-	newStr := ""
-	for _, ch := range str {
-		if _, ok := specialChars[ch]; ok {
-			newStr += fmt.Sprintf(" %c ", ch)
-		} else {
-			newStr += string(ch)
-		}
-	}
-	return newStr
-}
-
-// Tokenize : TODO - process raw string with double quote using json
 func Tokenize(str string) []Token {
 	str = removeComments(str)
-	str = processSpecialChar(str)
-	// tokenize
-	return strings.Fields(str)
+
+	const (
+		STATE_OUTSTRING = iota
+		STATE_INSTRING
+		STATE_INSTRING_ESCAPE
+	)
+
+	var tokens []Token
+	state := STATE_OUTSTRING
+	buffer := ""
+	flushBuffer := func() {
+		if len(buffer) > 0 {
+			tokens = append(tokens, buffer)
+		}
+		buffer = ""
+	}
+	for _, ch := range str {
+		switch state {
+		case STATE_OUTSTRING:
+			if unicode.IsSpace(ch) {
+				flushBuffer()
+			} else if ch == '(' || ch == ')' || ch == '*' {
+				flushBuffer()
+				buffer += string(ch)
+				flushBuffer()
+			} else if ch == '"' {
+				flushBuffer()
+				buffer += string(ch)
+				state = STATE_INSTRING
+			} else {
+				buffer += string(ch)
+			}
+		case STATE_INSTRING:
+			if ch == '\\' {
+				buffer += string(ch)
+				state = STATE_INSTRING_ESCAPE
+			} else if ch == '"' {
+				buffer += string(ch)
+				flushBuffer()
+				state = STATE_OUTSTRING
+			} else {
+				buffer += string(ch)
+			}
+		case STATE_INSTRING_ESCAPE:
+			buffer += string(ch)
+			state = STATE_INSTRING
+		default:
+			panic(fmt.Sprintf("invalid state: %d", state))
+		}
+	}
+	flushBuffer()
+	return tokens
 }
 ./pkg/fp/parser.go
 package fp
@@ -834,23 +869,6 @@ var printExtension = Extension{
 		return Int(len(values)), nil
 	},
 	Man: "module: (print 1 x (lambda 3)) - print values",
-}
-
-var unicodeExtension = Extension{
-	Name: "unicode",
-	Exec: func(ctx context.Context, values ...Object) (Object, error) {
-
-		var output String = ""
-		for _, v := range values {
-			if v, ok := v.(Int); ok {
-				output += String(fmt.Sprintf("%c", rune(v)))
-			} else {
-				return nil, fmt.Errorf("argument must be int")
-			}
-		}
-		return output, nil
-	},
-	Man: "module: (unicode 72 101 108 108 111 44 32 87 111 114 108 100 33) - convert a list of integers into string - this is just for hello world",
 }
 
 var timeExtension = Extension{

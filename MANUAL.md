@@ -46,6 +46,4 @@ module: (tail (print 1) (print 2) 3) - exec a sequence of expressions and return
 (time) - get current time
 >>>type
 module: (type x 1 (lambda y (add 1 y))) - get types of objects (can get multiple ones)
->>>unicode
-module: (unicode 72 101 108 108 111 44 32 87 111 114 108 100 33) - convert a list of integers into string - this is just for hello world
 ```

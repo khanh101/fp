@@ -125,7 +125,7 @@ func (r *Runtime) stepMany(ctx context.Context, exprList ...Expr) ([]Object, err
 	if len(exprList) != 0 {
 		for i, expr := range exprList {
 			if TAILCALL_OPTIMIZATION {
-				if i == len(exprList)-1 && len(exprList) >= 2 {
+				if i == len(exprList)-1 && len(exprList) >= 2 { // TODO somehow if exprList is of length 1 then error
 					opts := getOptionsFromContext(ctx)
 					opts.tailCall = true
 					ctx = context.WithValue(ctx, "step_options", opts)

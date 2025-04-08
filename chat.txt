@@ -338,6 +338,7 @@ func pop(tokenList []Token) ([]Token, Token, error) {
 	return tokenList[1:], tokenList[0], nil
 }
 
+// ParseAll : parse a token list
 func ParseAll(tokenList []Token) ([]Expr, []Token) {
 	var expr Expr
 	var exprList []Expr

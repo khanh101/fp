@@ -2,9 +2,54 @@ package fp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 )
+
+type Extension struct {
+	Name String
+	Exec func(ctx context.Context, values ...Object) (Object, error)
+	Man  string
+}
+
+func makeModuleFromExtension(e Extension) Module {
+	return Module{
+		Name: e.Name,
+		Exec: func(ctx context.Context, r *Runtime, expr LambdaExpr) (Object, error) {
+			args, err := r.stepMany(ctx, expr.Args...)
+			if err != nil {
+				return nil, err
+			}
+			var unwrappedArgs []Object
+			i := 0
+			for i < len(args) {
+				if _, ok := args[i].(Unwrap); ok {
+					if i+1 >= len(args) {
+						return nil, errors.New("unwrapping arguments must be a list")
+					}
+					argsList, ok := args[i+1].(List)
+					if !ok {
+						return nil, errors.New("unwrapping arguments must be a list")
+					}
+					for _, elem := range argsList {
+						unwrappedArgs = append(unwrappedArgs, elem)
+					}
+					i += 2
+				} else {
+					unwrappedArgs = append(unwrappedArgs, args[i])
+					i++
+				}
+			}
+			return e.Exec(ctx, unwrappedArgs...)
+		},
+		Man: e.Man,
+	}
+}
+
+func (r *Runtime) LoadExtension(e Extension) *Runtime {
+	return r.LoadModule(makeModuleFromExtension(e))
+}
 
 var letModule = Module{
 	Name: "let",

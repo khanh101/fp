@@ -2,6 +2,7 @@ package fp
 
 import (
 	"errors"
+	"slices"
 )
 
 // Expr : union of NameExpr, LambdaExpr
@@ -73,7 +74,7 @@ func (p *Parser) Clear() {
 func (p *Parser) Input(tok Token) Expr {
 	p.Buffer = append(p.Buffer, tok)
 	// try parse single // TODO : do this for simplicity
-	buffer := append([]Token(nil), p.Buffer...) // copy
+	buffer := slices.Clone(p.Buffer)
 	expr, buffer, err := parseSingle(buffer)
 	if err != nil {
 		// parse fail - don't do anything

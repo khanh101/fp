@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"time"
 )
@@ -15,9 +16,7 @@ type Runtime struct {
 type Frame map[String]Object
 
 func (f Frame) Update(otherFrame Frame) Frame {
-	for k, v := range otherFrame {
-		f[k] = v
-	}
+	maps.Copy(f, otherFrame)
 	return f
 }
 

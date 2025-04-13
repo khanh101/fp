@@ -280,6 +280,7 @@ package fp
 
 import (
 	"errors"
+	"slices"
 )
 
 // Expr : union of NameExpr, LambdaExpr
@@ -351,7 +352,7 @@ func (p *Parser) Clear() {
 func (p *Parser) Input(tok Token) Expr {
 	p.Buffer = append(p.Buffer, tok)
 	// try parse single // TODO : do this for simplicity
-	buffer := append([]Token(nil), p.Buffer...) // copy
+	buffer := slices.Clone(p.Buffer)
 	expr, buffer, err := parseSingle(buffer)
 	if err != nil {
 		// parse fail - don't do anything
@@ -944,6 +945,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"time"
 )
@@ -955,9 +957,7 @@ type Runtime struct {
 type Frame map[String]Object
 
 func (f Frame) Update(otherFrame Frame) Frame {
-	for k, v := range otherFrame {
-		f[k] = v
-	}
+	maps.Copy(f, otherFrame)
 	return f
 }
 

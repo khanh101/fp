@@ -8,12 +8,12 @@ import (
 	"sort"
 )
 
-func write(format string, args ...interface{}) {
+func write(format string, args ...any) {
 	_, _ = fmt.Fprintf(os.Stderr, format, args...)
 	_ = os.Stderr.Sync() // flush
 }
 
-func writeln(format string, args ...interface{}) {
+func writeln(format string, args ...any) {
 	write(format+"\n", args...)
 }
 

@@ -125,7 +125,7 @@
 
 (count 2000)
 
-// test writing my own map instead of using builtin map
+// writing my own map instead of using builtin map
 (let map1 (lambda l f (tail
     (let length (len l))
     (
@@ -138,4 +138,6 @@
 )
 
 (map1 (list 1 2 3) (lambda x (add x 1)))
+
+
 

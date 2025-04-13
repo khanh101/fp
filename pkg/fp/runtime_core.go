@@ -134,7 +134,7 @@ func (r *Runtime) Step(ctx context.Context, expr Expr) (Object, error) {
 			case Module:
 				return f.Exec(ctx, r, expr)
 			default:
-				return nil, fmt.Errorf("function or module %s found but wrong type", expr.Name.String())
+				return nil, fmt.Errorf("function or module %s found but wrong type %s", expr.Name.String(), f.String())
 			}
 		default:
 			return nil, fmt.Errorf("runtime error: unknown expression type")

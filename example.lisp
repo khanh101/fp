@@ -125,3 +125,17 @@
 
 (count 2000)
 
+// test writing my own map - TODO
+(let l (list 1 2 3))
+(let map1 (lambda l map_func (tail
+    (let length (len l))
+    (
+        case length
+        0 (list)                                                            // return empty list
+        _ (append (map1 (slice l 1 (sub length 1)) (map_func (peek l length)))     // map the first item and call recursively on other values
+    )
+    ))
+))
+
+(map1 l (lambda x (add x 1)))
+

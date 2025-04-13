@@ -211,15 +211,15 @@ var divExtension = Extension{
 	Name: "div",
 	Exec: func(ctx context.Context, values ...Object) (Object, error) {
 		if len(values) != 2 {
-			return nil, fmt.Errorf("dividing requires 2 arguments")
+			return nil, fmt.Errorf("divide requires 2 arguments")
 		}
 		a, ok := values[0].(Int)
 		if !ok {
-			return nil, fmt.Errorf("dividing non-integer value")
+			return nil, fmt.Errorf("divide non-integer value")
 		}
 		b, ok := values[1].(Int)
 		if !ok {
-			return nil, fmt.Errorf("dividing non-integer value")
+			return nil, fmt.Errorf("divide non-integer value")
 		}
 		if b == 0 {
 			return nil, fmt.Errorf("division by zero")

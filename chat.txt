@@ -628,15 +628,15 @@ var divExtension = Extension{
 	Name: "div",
 	Exec: func(ctx context.Context, values ...Object) (Object, error) {
 		if len(values) != 2 {
-			return nil, fmt.Errorf("dividing requires 2 arguments")
+			return nil, fmt.Errorf("divide requires 2 arguments")
 		}
 		a, ok := values[0].(Int)
 		if !ok {
-			return nil, fmt.Errorf("dividing non-integer value")
+			return nil, fmt.Errorf("divide non-integer value")
 		}
 		b, ok := values[1].(Int)
 		if !ok {
-			return nil, fmt.Errorf("dividing non-integer value")
+			return nil, fmt.Errorf("divide non-integer value")
 		}
 		if b == 0 {
 			return nil, fmt.Errorf("division by zero")
@@ -1074,7 +1074,7 @@ func (r *Runtime) Step(ctx context.Context, expr Expr) (Object, error) {
 			case Module:
 				return f.Exec(ctx, r, expr)
 			default:
-				return nil, fmt.Errorf("function or module %s found but wrong type", expr.Name.String())
+				return nil, fmt.Errorf("function or module %s found but wrong type %s", expr.Name.String(), f.String())
 			}
 		default:
 			return nil, fmt.Errorf("runtime error: unknown expression type")

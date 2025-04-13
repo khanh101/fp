@@ -316,7 +316,7 @@ var sliceExtension = Extension{
 			return nil, fmt.Errorf("third argument must be integer")
 		}
 		length := Int(len(l))
-		if i < 1 || i > length || j < 1 || j > length {
+		if i-1 < 0 || i-1 >= length || j < 0 || j > length {
 			return nil, fmt.Errorf("list is out of range")
 		}
 		return l[i-1 : j], nil
